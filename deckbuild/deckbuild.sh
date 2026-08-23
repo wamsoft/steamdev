@@ -55,12 +55,18 @@ SRC_ID="$(printf '%s' "$SRC" | md5sum | cut -c1-10)"
 BUILD_VOL="deckbuild-build-${SRC_ID}"
 CACHE_VOL="deckbuild-cache"
 
+# コンパイラ: sniper SDK 同梱の gcc-14 (Valve バックポート) を既定にする。
+# glibc 2.31 のまま新しい C++ が使える。DECKBUILD_CC/CXX で差し替え可 (clang 等)。
+CC_SEL="${DECKBUILD_CC:-gcc-14}"
+CXX_SEL="${DECKBUILD_CXX:-g++-14}"
+
 run_in_container() {
     docker run --rm -i $( [ -t 0 ] && echo -t ) \
         -v "$SRC":/work \
         -v "$BUILD_VOL":/work/build \
         -v "$CACHE_VOL":/cache \
         -e VCPKG_DEFAULT_BINARY_CACHE=/cache/vcpkg-bincache \
+        -e CC="$CC_SEL" -e CXX="$CXX_SEL" \
         -w /work \
         "$IMAGE" bash -c "mkdir -p /cache/vcpkg-bincache && $1"
 }
