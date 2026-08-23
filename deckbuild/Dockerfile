@@ -14,8 +14,10 @@ FROM registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
 
 USER root
 
-# vcpkg の一部ポート (libvpx 等) が要求するアセンブラを追加
-RUN apt-get update && apt-get install -y --no-install-recommends nasm yasm \
+# ビルドツール類を追加:
+# - nasm/yasm: vcpkg の一部ポート (libvpx 等) が要求するアセンブラ
+# - smpq: MPQ アーカイバ (devilutionX 等の資材パッケージングが要求)
+RUN apt-get update && apt-get install -y --no-install-recommends nasm yasm smpq \
     && rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.31.7
