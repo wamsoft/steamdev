@@ -1,0 +1,25 @@
+# steamctl project 定義: devilutionX を Steam Deck へ
+# シェアウェアデータ (gamedata/spawn.mpq) は
+# https://github.com/diasurgical/devilutionx-assets/releases から取得したもの。
+
+[project]
+gameid = "devilutionx"
+
+[targets.linux.build]
+kind = "deckbuild"
+preset = "x64-linux"        # CMakeUserPresets.json (ローカル追加) で定義
+
+[targets.linux.stage]
+sources = [
+    { type = "mirror", from = "bin/x64-linux/Release/bin", to = "" },
+    { type = "flatten", from = "bin/x64-linux/Release/share/diasurgical/devilutionx", to = "", include = ["devilutionx.mpq"] },
+    { type = "mirror", from = "gamedata", to = "" },
+]
+
+[targets.linux.deploy]
+# save は既定の XDG パス (~/.local/share/diasurgical/devilution、自動作成) に任せる。
+# --save-dir ./save は事前にディレクトリが無いと Read-Only エラーになるので使わない
+command = "./devilutionx --data-dir ."
+# SteamOS ネイティブには libSDL2_image が無いため、ビルド環境と同一の
+# sniper ランタイムコンテナで実行する (SDL2_image/z/bz2 等が確実に揃う)
+settings = { compat_tool = "SteamLinuxRuntime_sniper" }

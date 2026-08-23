@@ -1,0 +1,19 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "x64-linux",
+            "displayName": "Linux x64 (steamctl deckbuild)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/x64-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "DEVILUTIONX_SYSTEM_LIBSODIUM": "OFF",
+                "DEVILUTIONX_STATIC_LIBSODIUM": "ON",
+                "BUILD_TESTING": "OFF",
+                "CPACK": "ON",
+                "BUILD_ASSETS_MPQ": "ON"
+            }
+        }
+    ]
+}

@@ -221,6 +221,7 @@ src/steamctl/
   cli.py         # steamctl CLI
 deckbuild/       # sniper SDK コンテナによる Linux ビルド環境 (Dockerfile + ラッパ)
 docs/            # プロトコル仕様 / 定義リファレンス / ワークフロー
+examples/        # 適用例 (devilutionx: 外部 CMake プロジェクトへの非侵襲適用)
 ```
 
 ## ドキュメント索引
@@ -243,3 +244,6 @@ docs/            # プロトコル仕様 / 定義リファレンス / ワーク�
   (sniper SDK コンテナ → ネイティブ実行) の両方で Deck 上に動作確認
 - REPL 連携: krkrz -replweb をトンネル経由で駆動 (TJS 評価 / キー入力注入 /
   エンジン内キャプチャ回収) を確認
+- 外部プロジェクト適用: devilutionX (Diablo 1 エンジン再実装) を上流無変更で
+  Linux ビルド → sniper ランタイム実行まで確認
+  ([examples/devilutionx](examples/devilutionx/))
