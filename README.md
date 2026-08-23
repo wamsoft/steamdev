@@ -115,7 +115,15 @@ settings = { steam_play = "1", compat_tool = "proton-stable" }   # Proton で実
 ```
 
 全キーの説明は [docs/DECKPROJECT.md](docs/DECKPROJECT.md)。
-実運用例は krkrz_dev の `deckproject.toml` を参照。
+
+実例プロジェクト:
+
+- **krkrz_dev** (https://github.com/wamsoft/krkrz_dev) — 吉里吉里Z の開発用
+  umbrella リポジトリ。Win (Proton) / Linux (ネイティブ) 両ターゲットの
+  実運用例で、ルートの `deckproject.toml` を参照 (※ 公開リポジトリへの反映は
+  今後の更新で追加予定)
+- **devilutionX** — 外部 CMake プロジェクトへの非侵襲適用例
+  ([examples/devilutionx](examples/devilutionx/))
 
 ### 3-2. (任意) プロジェクト .venv — Python から steamctl を使う場合
 

@@ -152,7 +152,8 @@ compat_tool の値:
 
 ## 実例 (krkrz)
 
-krkrz_dev リポジトリの `deckproject.toml` を参照。要点:
+krkrz_dev (吉里吉里Z 開発用 umbrella リポジトリ、
+https://github.com/wamsoft/krkrz_dev) の `deckproject.toml` を参照。要点:
 
 - Linux: deckbuild でビルド → `bin/x64-linux/Release` + `data/` を stage →
   soname リンク欠落 (`libSDL3.so.0`) を stage script で補完 →
