@@ -6,6 +6,10 @@ Steam Deck / Steam Frame を制御するためのライブラリ + CLI。
 
 解析結果のプロトコル仕様は [docs/PROTOCOL.md](docs/PROTOCOL.md) を参照。
 
+実機 (Steam Deck / SteamOS 3.8.16) で以下を検証済み: mDNS 探索、既存鍵での SSH 接続、
+sync-utils、status、deploy → run → delete の一連、screenshot、exec --stream、
+logs 回収、SSH トンネル正方向 (-L) / 逆方向 (-R)。
+
 ## 特徴
 
 - 公式クライアントと**同じ SSH 鍵を再利用** (`%LOCALAPPDATA%\steamos-devkit\...\devkit_rsa`)。
