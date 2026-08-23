@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "x64-linux",
-            "displayName": "Linux x64 (steamctl deckbuild)",
+            "displayName": "Linux x64 (steamdev deckbuild)",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/x64-linux",
             "cacheVariables": {

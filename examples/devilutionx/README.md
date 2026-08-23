@@ -15,15 +15,15 @@
 ```powershell
 git clone --depth 1 https://github.com/diasurgical/devilutionX.git devilutionx
 cd devilutionx
-copy <steamctl>/examples/devilutionx/CMakeUserPresets.json .
-copy <steamctl>/examples/devilutionx/deckproject.toml .
+copy <steamdev>/examples/devilutionx/CMakeUserPresets.json .
+copy <steamdev>/examples/devilutionx/deckproject.toml .
 
 # シェアウェアデータ (無償配布) を取得
 mkdir gamedata
 curl -L -o gamedata/spawn.mpq https://github.com/diasurgical/devilutionx-assets/releases/download/v4/spawn.mpq
 
 # ビルド → 資材構築 → Deck へ転送 → 起動
-steamctl -d <deck-ip> project -p . ship linux
+steamdev -d <deck-ip> project -p . ship linux
 ```
 
 Steam Deck / SteamOS 3.8.16 実機で Diablo Shareware タイトルメニュー表示まで

@@ -1,6 +1,6 @@
 # Steam Deck 開発ワークフロー
 
-steamctl 一式を使った日常の開発サイクル。エージェント (Claude) が自律的に
+steamdev 一式を使った日常の開発サイクル。エージェント (Claude) が自律的に
 回す場合もこの手順に従う。
 
 ## 0. 前提 (初回セットアップ)
@@ -8,52 +8,52 @@ steamctl 一式を使った日常の開発サイクル。エージェント (Cla
 1. Deck 側: 開発者モード有効化 + devkit サービス有効 (公式手順どおり)
 2. ホスト側: `pip install paramiko zeroconf` (または `pip install -e .`)
 3. ペアリング: 公式 SteamOS Devkit Client でペアリング済みなら**不要**
-   (同じ鍵を共有)。新規なら `steamctl -d <ip> register` → Deck 側で承認
-4. `steamctl -d <ip> sync-utils` — デバイス側ヘルパスクリプト転送 (初回必須)
+   (同じ鍵を共有)。新規なら `steamdev -d <ip> register` → Deck 側で承認
+4. `steamdev -d <ip> sync-utils` — デバイス側ヘルパスクリプト転送 (初回必須)
 5. Linux ビルドする場合: WSL2 + docker + `deckbuild/deckbuild.sh image`
 6. プロジェクトに `deckproject.toml` を書く (docs/DECKPROJECT.md)
 
-デバイス指定は毎回 `-d <ip>` か、環境変数 `STEAMCTL_DEVICE` で固定。
+デバイス指定は毎回 `-d <ip>` か、環境変数 `STEAMDEV_DEVICE` で固定。
 
 ## 1. 基本サイクル
 
 ```bash
 # 疎通確認 (Deck の電源が入っているか / どの状態か)
-steamctl discover                 # LAN 探索 (mDNS)
-steamctl status                   # OS/セッション/Steam クライアント状態
+steamdev discover                 # LAN 探索 (mDNS)
+steamdev status                   # OS/セッション/Steam クライアント状態
 
 # ビルド → 送り込み → 起動 (1 コマンド)
-steamctl project -p <proj> ship linux
-steamctl project -p <proj> ship windows
+steamdev project -p <proj> ship linux
+steamdev project -p <proj> ship windows
 
 # ビルド済みで送るだけなら
-steamctl project -p <proj> deploy linux --start
+steamdev project -p <proj> deploy linux --start
 
 # 起動・終了・切り替え
-steamctl run <gameid>                             # 再起動 (前面化)
-steamctl exec -- "pkill -f '<gameid>/exe名[.]ext'" # 終了 (下記の注意参照)
-steamctl list                                     # 入っているタイトル一覧
-steamctl delete <gameid>                          # 削除
+steamdev run <gameid>                             # 再起動 (前面化)
+steamdev exec -- "pkill -f '<gameid>/exe名[.]ext'" # 終了 (下記の注意参照)
+steamdev list                                     # 入っているタイトル一覧
+steamdev delete <gameid>                          # 削除
 ```
 
 ## 2. 観測・デバッグ
 
 ```bash
 # 画面確認 (エージェントの目)
-steamctl screenshot -o shot.png
+steamdev screenshot -o shot.png
 
 # プロセス確認
-steamctl exec -- "pgrep -af devkit-game/<gameid>"
+steamdev exec -- "pgrep -af devkit-game/<gameid>"
 
 # タイトルの stdout (Steam ログ経由) をリアルタイム追跡
-steamctl exec --stream -- "tail -F ~/.local/share/Steam/logs/console-linux.txt"
+steamdev exec --stream -- "tail -F ~/.local/share/Steam/logs/console-linux.txt"
 
 # ログ・クラッシュダンプ一括回収
-steamctl logs --out ./devkit-logs
+steamdev logs --out ./devkit-logs
 
 # 対話シェル / 任意コマンド
-steamctl shell
-steamctl exec -- "ls ~/devkit-game"
+steamdev shell
+steamdev exec -- "ls ~/devkit-game"
 ```
 
 ### アプリ側 REPL / ソケットサービスに接続する
@@ -63,9 +63,9 @@ localhost バインドでも SSH トンネルで届く:
 
 ```bash
 # ホスト:18080 → Deck:8080 (アプリの待ち受けポート)
-steamctl tunnel -L 18080:8080
+steamdev tunnel -L 18080:8080
 # 逆方向: Deck 上のアプリ → ホスト側サービス
-steamctl tunnel -R 18888:8000
+steamdev tunnel -R 18888:8000
 ```
 
 ライブラリからは `LocalForward` / `RemoteForward` (with 文対応)。
@@ -80,7 +80,7 @@ krkrz を `-replweb` 付きで起動すると Deck の 127.0.0.1:8899 に HTTP+S
    **注意: 起動引数はショートカット登録時に Steam 側へ焼き込まれる**ため、
    デバイス上の `<gameid>-argv.json` を書き換えても反映されない。引数変更は
    再デプロイ (create-shortcut のやり直し) で行う。
-2. トンネル: `steamctl tunnel -L 18899:8899` (ライブラリなら `LocalForward`)
+2. トンネル: `steamdev tunnel -L 18899:8899` (ライブラリなら `LocalForward`)
 3. TJS 評価: `POST http://127.0.0.1:18899/cmd` に式を body で送る。
    **応答 body は受理ステータスのみ ("0"/"1")。評価結果は SSE
    `GET /events` にログ (`{"cls":"result","text":"=> ..."}`) として流れる**

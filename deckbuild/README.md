@@ -69,16 +69,16 @@ PRESET=x64-linux BUILD_TYPE=Debug CMAKEOPT='-DFOO=ON' ./deckbuild.sh -s ... all
 - 成果物は `cmake --install` でソース側 `bin/<preset>/<build_type>/` に出る
   ので Windows からそのまま見える。
 
-## Steam Deck へのデプロイ (steamctl と連携)
+## Steam Deck へのデプロイ (steamdev と連携)
 
 ```bash
 # ネイティブ実行 (SteamOS の glibc は sniper より新しいのでそのまま動く)
-steamctl -d <deck-ip> deploy --gameid mygame \
+steamdev -d <deck-ip> deploy --gameid mygame \
     --dir D:/work/myproject/bin/x64-linux/Release \
     --command "./mygame data" --start
 
 # Steam Linux Runtime (sniper) コンテナ内で実行 = Steam 配布時と同一環境
-steamctl -d <deck-ip> deploy --gameid mygame \
+steamdev -d <deck-ip> deploy --gameid mygame \
     --dir D:/work/myproject/bin/x64-linux/Release \
     --command "./mygame data" \
     --set compat_tool=SteamLinuxRuntime_sniper --start

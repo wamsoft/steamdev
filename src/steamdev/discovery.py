@@ -22,7 +22,7 @@ def _zeroconf():
         import zeroconf
     except ImportError as e:
         raise RuntimeError(
-            "mDNS 探索には zeroconf が必要です: pip install 'steamctl-deck[discovery]' "
+            "mDNS 探索には zeroconf が必要です: pip install 'steamdev[discovery]' "
             "(IP 直指定なら不要)"
         ) from e
     return zeroconf

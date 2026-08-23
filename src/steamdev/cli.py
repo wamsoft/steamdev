@@ -1,4 +1,4 @@
-"""steamctl command line interface."""
+"""steamdev command line interface."""
 
 from __future__ import annotations
 
@@ -18,15 +18,15 @@ from .discovery import discover
 from . import keys
 from .tunnel import LocalForward, RemoteForward
 
-logger = logging.getLogger("steamctl")
+logger = logging.getLogger("steamdev")
 
 GAMEID_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]+$")
 
 
 def get_device(args: argparse.Namespace) -> Device:
-    target = args.device or os.environ.get("STEAMCTL_DEVICE")
+    target = args.device or os.environ.get("STEAMDEV_DEVICE")
     if not target:
-        raise SystemExit("no device given: pass -d/--device or set STEAMCTL_DEVICE")
+        raise SystemExit("no device given: pass -d/--device or set STEAMDEV_DEVICE")
     if re.match(r"^\d+\.\d+\.\d+\.\d+$", target) or "." in target:
         return Device(target)
     return Device.from_name(target)
@@ -241,12 +241,12 @@ def cmd_ssh_command(args) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="steamctl",
+    parser = argparse.ArgumentParser(prog="steamdev",
                                      description="Headless SteamOS devkit control")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-d", "--device", metavar="ADDR|NAME",
-                        help="device IP address or mDNS name (or $STEAMCTL_DEVICE)")
+                        help="device IP address or mDNS name (or $STEAMDEV_DEVICE)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("discover", help="browse LAN for devkit devices")

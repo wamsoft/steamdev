@@ -36,7 +36,7 @@ to send (staging), and how to launch on the Steam Deck::
     settings = { steam_play = "1", compat_tool = "proton-experimental" }
 
 Build/stage scripts run with cwd = project dir and env vars
-``STEAMCTL_PROJECT_DIR``, ``STEAMCTL_STAGE_DIR``, ``STEAMCTL_TARGET`` set.
+``STEAMDEV_PROJECT_DIR``, ``STEAMDEV_STAGE_DIR``, ``STEAMDEV_TARGET`` set.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ from .device import Device
 logger = logging.getLogger(__name__)
 
 PROJECT_FILE = "deckproject.toml"
-STEAMCTL_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+STEAMDEV_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 @dataclass
@@ -110,9 +110,9 @@ class Project:
 
 def _run_env(project: Project, target: str) -> dict:
     env = dict(os.environ)
-    env["STEAMCTL_PROJECT_DIR"] = project.root
-    env["STEAMCTL_STAGE_DIR"] = project.stage_dir(target)
-    env["STEAMCTL_TARGET"] = target
+    env["STEAMDEV_PROJECT_DIR"] = project.root
+    env["STEAMDEV_STAGE_DIR"] = project.stage_dir(target)
+    env["STEAMDEV_TARGET"] = target
     # プロジェクトに .venv があればその python を優先させる
     # (build/stage script の `python` がプロジェクト環境で解決される)
     venv = os.path.join(project.root, ".venv")
@@ -144,7 +144,7 @@ def build(project: Project, target: str) -> None:
         return
     kind = conf.get("kind", "shell")
     if kind == "deckbuild":
-        script = os.path.join(STEAMCTL_DIR, "deckbuild", "deckbuild.sh")
+        script = os.path.join(STEAMDEV_DIR, "deckbuild", "deckbuild.sh")
         if sys.platform == "win32":
             cmd = ["wsl", "-e", "bash", "-c",
                    "PRESET={preset} BUILD_TYPE={bt} CMAKEOPT={opt} bash {script} -s {src} all".format(

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "steamctl-deck"
+name = "steamdev"
 version = "0.1.0"
 description = "Headless control library / CLI for SteamOS devkit devices (Steam Deck)"
 readme = "README.md"
@@ -14,11 +14,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# mDNS 探索 (steamctl discover / 名前指定)。IP 直指定運用なら不要
+# mDNS 探索 (steamdev discover / 名前指定)。IP 直指定運用なら不要
 discovery = ["zeroconf>=0.130"]
 
 [project.scripts]
-steamctl = "steamctl.cli:main"
+steamdev = "steamdev.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

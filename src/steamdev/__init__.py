@@ -1,11 +1,11 @@
-"""steamctl - headless control library for SteamOS devkit devices (Steam Deck).
+"""steamdev - headless control library for SteamOS devkit devices (Steam Deck).
 
 Re-implements the control protocol of Valve's SteamOS Devkit Client
 (MIT licensed) as a library + CLI, without the imgui GUI.
 
 Quick start::
 
-    from steamctl import Device, deploy, DeploySpec
+    from steamdev import Device, deploy, DeploySpec
 
     dev = Device("192.168.1.30")        # or Device.from_name("steamdeck")
     dev.register()                       # first time only (approve on device)

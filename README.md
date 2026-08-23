@@ -1,4 +1,4 @@
-# steamctl — headless Steam Deck (SteamOS devkit) control
+# steamdev — headless Steam Deck (SteamOS devkit) control
 
 GUI なしで Steam Deck を制御するツール。ローカルのプロジェクトをビルドして
 Deck に送り込み、起動・観測・リモートデバッグまでをコマンドラインだけで回せる。
@@ -18,7 +18,7 @@ Deck に送り込み、起動・観測・リモートデバッグまでをコマ
 で sniper コンテナ内に任意のビルドコマンドを流せる。
 
 ```
-steamctl -d <deck-ip> project -p <プロジェクト> ship linux
+steamdev -d <deck-ip> project -p <プロジェクト> ship linux
 # → ビルド → 資材構築 → Deck へ転送 → Steam 登録 → 起動 まで 1 コマンド
 ```
 
@@ -39,11 +39,11 @@ steamctl -d <deck-ip> project -p <プロジェクト> ship linux
 ## 2. 初期セットアップ (ホスト側、1 回だけ)
 
 ```powershell
-# CLI をグローバル導入 (editable: steamctl リポジトリを git pull すれば更新反映)
-uv tool install --editable <steamctl リポジトリ絶対パス> --with zeroconf
+# CLI をグローバル導入 (editable: steamdev リポジトリを git pull すれば更新反映)
+uv tool install --editable <steamdev リポジトリ絶対パス> --with zeroconf
 uv tool update-shell        # ~/.local/bin を PATH へ (初回のみ、要シェル再起動)
 
-steamctl --version          # 動作確認
+steamdev --version          # 動作確認
 ```
 
 > editable インストールが前提。`deckbuild/` (Linux ビルド環境) の解決が
@@ -52,16 +52,16 @@ steamctl --version          # 動作確認
 ### Deck とのペアリング
 
 ```powershell
-steamctl discover                    # LAN 上の Deck を探す (IP がわかるなら省略可)
-steamctl -d <deck-ip> register       # 初回のみ。Deck 側で承認ダイアログが出る
-steamctl -d <deck-ip> sync-utils     # デバイス側ヘルパスクリプト転送 (初回必須)
-steamctl -d <deck-ip> status         # 疎通確認 (デバイス状態が JSON で返れば OK)
+steamdev discover                    # LAN 上の Deck を探す (IP がわかるなら省略可)
+steamdev -d <deck-ip> register       # 初回のみ。Deck 側で承認ダイアログが出る
+steamdev -d <deck-ip> sync-utils     # デバイス側ヘルパスクリプト転送 (初回必須)
+steamdev -d <deck-ip> status         # 疎通確認 (デバイス状態が JSON で返れば OK)
 ```
 
 公式 SteamOS Devkit Client でペアリング済みの Deck なら **register は不要**
 (同じ SSH 鍵を共有するため、そのまま接続できる)。
 
-毎回 `-d` を打ちたくない場合は環境変数で固定: `$env:STEAMCTL_DEVICE = "<deck-ip>"`
+毎回 `-d` を打ちたくない場合は環境変数で固定: `$env:STEAMDEV_DEVICE = "<deck-ip>"`
 
 ### Linux ビルド環境 (Linux ネイティブ版を作る場合のみ)
 
@@ -69,7 +69,7 @@ WSL2 の Ubuntu に docker を入れた上で:
 
 ```bash
 # WSL 内で。Valve 公式 sniper SDK ベースのビルドイメージを作成 (初回のみ、数 GB DL)
-bash <steamctl>/deckbuild/deckbuild.sh image
+bash <steamdev>/deckbuild/deckbuild.sh image
 ```
 
 ## 3. プロジェクト側の手順 (プロジェクトごと)
@@ -124,26 +124,26 @@ settings = { steam_play = "1", compat_tool = "proton-stable" }   # Proton で実
 - **devilutionX** — 外部 CMake プロジェクトへの非侵襲適用例
   ([examples/devilutionx](examples/devilutionx/))
 
-### 3-2. (任意) プロジェクト .venv — Python から steamctl を使う場合
+### 3-2. (任意) プロジェクト .venv — Python から steamdev を使う場合
 
 検証スクリプト等で `Device` / `LocalForward` を import したいプロジェクトだけ:
 
 ```powershell
 cd <プロジェクト>
 uv venv .venv
-uv pip install --python .venv/Scripts/python.exe -e <steamctl リポジトリ> zeroconf
+uv pip install --python .venv/Scripts/python.exe -e <steamdev リポジトリ> zeroconf
 ```
 
-`.venv` があると `steamctl project` の build/stage スクリプトは自動で
+`.venv` があると `steamdev project` の build/stage スクリプトは自動で
 その venv の python を使う (PATH 先頭に `.venv/Scripts` が注入される)。
 `.venv` は .gitignore に入れておくこと。
 
 ### 3-3. 動かす
 
 ```powershell
-steamctl project -p <プロジェクト> show                    # 定義の確認
-steamctl -d <deck> project -p <プロジェクト> ship linux    # ビルド→転送→起動 一括
-steamctl -d <deck> project -p <プロジェクト> ship windows
+steamdev project -p <プロジェクト> show                    # 定義の確認
+steamdev -d <deck> project -p <プロジェクト> ship linux    # ビルド→転送→起動 一括
+steamdev -d <deck> project -p <プロジェクト> ship windows
 ```
 
 個別ステップ: `build` / `stage` / `deploy [--start]`。
@@ -152,16 +152,16 @@ steamctl -d <deck> project -p <プロジェクト> ship windows
 ## 4. 日常操作の早見表
 
 ```powershell
-steamctl status                     # デバイス状態
-steamctl list                       # 入っているタイトル一覧
-steamctl run <gameid>               # 起動 / 前面化
-steamctl delete <gameid>            # 削除
-steamctl screenshot -o shot.png     # 画面キャプチャ
-steamctl logs --out ./devkit-logs   # Steam ログ・クラッシュダンプ回収
-steamctl exec -- <コマンド>          # SSH ワンライナー
-steamctl exec --stream -- tail -F ~/.local/share/Steam/logs/console-linux.txt
-steamctl shell                      # 対話シェル
-steamctl tunnel -L 18899:8899       # ポートフォワード (アプリの REPL 等へ)
+steamdev status                     # デバイス状態
+steamdev list                       # 入っているタイトル一覧
+steamdev run <gameid>               # 起動 / 前面化
+steamdev delete <gameid>            # 削除
+steamdev screenshot -o shot.png     # 画面キャプチャ
+steamdev logs --out ./devkit-logs   # Steam ログ・クラッシュダンプ回収
+steamdev exec -- <コマンド>          # SSH ワンライナー
+steamdev exec --stream -- tail -F ~/.local/share/Steam/logs/console-linux.txt
+steamdev shell                      # 対話シェル
+steamdev tunnel -L 18899:8899       # ポートフォワード (アプリの REPL 等へ)
 ```
 
 開発サイクルの詳細・リモートデバッグ (gdbserver / Proton+msvsmon / krkrz -replweb
@@ -175,7 +175,7 @@ REPL 駆動)・実機で確認済みのハマりどころ一覧は
 | デプロイしたのに起動しない | [docs/WORKFLOW.md](docs/WORKFLOW.md) のハマりどころ表 (未インストール Proton 指定が定番) |
 | Linux バイナリが即死 | 同上 (共有ライブラリの soname / LD_LIBRARY_PATH) |
 | ビルドが通らない | [deckbuild/README.md](deckbuild/README.md) (コンパイラ差し替え等) |
-| 接続できない | `steamctl discover` → `info` → `status` の順に切り分け |
+| 接続できない | `steamdev discover` → `info` → `status` の順に切り分け |
 
 ---
 
@@ -184,7 +184,7 @@ REPL 駆動)・実機で確認済みのハマりどころ一覧は
 ## ライブラリ API
 
 ```python
-from steamctl import Device, deploy, DeploySpec, LocalForward
+from steamdev import Device, deploy, DeploySpec, LocalForward
 
 dev = Device("192.168.1.30")            # or Device.from_name("steamdeck")
 dev.sync_utils()                        # デバイス側スクリプト転送 (初回必須)
@@ -232,14 +232,14 @@ with LocalForward(dev.ssh.get_transport(), 18899, "127.0.0.1", 8899):
 ## リポジトリ構成
 
 ```
-src/steamctl/
+src/steamdev/
   keys.py        # devkit RSA 鍵 (公式クライアントと共有)
   discovery.py   # mDNS (_steamos-devkit._tcp) 探索 (zeroconf は遅延 import)
   device.py      # Device: HTTP ペアリング / SSH 実行 / rsync / スクリーンショット等
   deploy.py      # タイトルデプロイフロー (prepare-upload → rsync → create-shortcut)
   project.py     # deckproject.toml 駆動の build/stage/deploy パイプライン
   tunnel.py      # SSH ポートフォワード (正方向 / 逆方向)
-  cli.py         # steamctl CLI
+  cli.py         # steamdev CLI
 deckbuild/       # sniper SDK コンテナによる Linux ビルド環境 (Dockerfile + ラッパ)
 docs/            # プロトコル仕様 / 定義リファレンス / ワークフロー
 examples/        # 適用例 (devilutionx: 外部 CMake プロジェクトへの非侵襲適用)

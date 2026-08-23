@@ -1,15 +1,15 @@
 # deckproject.toml リファレンス
 
-`steamctl project` コマンド群が読むプロジェクト定義ファイル。プロジェクトの
+`steamdev project` コマンド群が読むプロジェクト定義ファイル。プロジェクトの
 ルートに `deckproject.toml` を置くと、ビルド → 資材構築 (stage) → Steam Deck
 へのデプロイ → 起動までを定義駆動で実行できる。
 
 ```
-steamctl project -p <dir> show                  # 定義の確認
-steamctl project -p <dir> build <target>        # ビルドのみ
-steamctl project -p <dir> stage <target>        # 資材構築のみ (.deckstage/<target>)
-steamctl -d <deck> project -p <dir> deploy <target> [--start]   # stage + デプロイ
-steamctl -d <deck> project -p <dir> ship <target>               # build+stage+deploy+起動
+steamdev project -p <dir> show                  # 定義の確認
+steamdev project -p <dir> build <target>        # ビルドのみ
+steamdev project -p <dir> stage <target>        # 資材構築のみ (.deckstage/<target>)
+steamdev -d <deck> project -p <dir> deploy <target> [--start]   # stage + デプロイ
+steamdev -d <deck> project -p <dir> ship <target>               # build+stage+deploy+起動
 ```
 
 オプション: `--clean-stage` (stage ディレクトリを作り直す)、`--clean` (デバイス側の
@@ -113,9 +113,9 @@ sources = [
 `script` は cwd=プロジェクトルート、以下の環境変数付きで実行される
 (プロジェクトに `.venv` があればその python が優先される):
 
-- `STEAMCTL_PROJECT_DIR` — プロジェクトルート絶対パス
-- `STEAMCTL_STAGE_DIR` — stage ディレクトリ絶対パス
-- `STEAMCTL_TARGET` — ターゲット名
+- `STEAMDEV_PROJECT_DIR` — プロジェクトルート絶対パス
+- `STEAMDEV_STAGE_DIR` — stage ディレクトリ絶対パス
+- `STEAMDEV_TARGET` — ターゲット名
 
 完全に作り直したいときは `--clean-stage`。
 
@@ -164,10 +164,10 @@ https://github.com/wamsoft/krkrz_dev) の `deckproject.toml` を参照。要点:
 ## トラブルシューティング
 
 - **デプロイ後に起動しない (無反応)**: `compat_tool` が未インストールの Proton を
-  指していないか。`steamctl exec -- "tail -20 ~/.local/share/Steam/logs/compat_log.txt"`
+  指していないか。`steamdev exec -- "tail -20 ~/.local/share/Steam/logs/compat_log.txt"`
   で `not installed` を確認。
 - **Linux バイナリが起動直後に死ぬ**: 共有ライブラリ解決を疑う。
-  `steamctl exec -- "cd ~/devkit-game/<id> && LD_LIBRARY_PATH=. ldd ./<exe> | grep 'not found'"`
+  `steamdev exec -- "cd ~/devkit-game/<id> && LD_LIBRARY_PATH=. ldd ./<exe> | grep 'not found'"`
 - **Proton 初回起動が遅い**: prefix 生成のため数十秒かかるのは正常。
-- **起動確認**: `steamctl exec -- "pgrep -af devkit-game/<id>"` と
-  `steamctl screenshot` の組み合わせが手早い。
+- **起動確認**: `steamdev exec -- "pgrep -af devkit-game/<id>"` と
+  `steamdev screenshot` の組み合わせが手早い。
