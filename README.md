@@ -11,6 +11,12 @@ Deck に送り込み、起動・観測・リモートデバッグまでをコマ
 定義ファイルを置くだけで Windows ビルド (Proton 実行) と Linux ビルド
 (ネイティブ実行) を同じデータ構成で並行運用できる。
 
+ビルドシステムは CMake に限らない: パイプラインのビルド工程は任意コマンド
+(`build.kind = "shell"`) で、資材構築・デプロイはファイルベースなので
+ビルドシステム非依存。CMake プリセット前提なのは deckbuild の定型フロー
+(`kind = "deckbuild"`) だけで、非 CMake プロジェクトも `deckbuild.sh run`
+で sniper コンテナ内に任意のビルドコマンドを流せる。
+
 ```
 steamctl -d <deck-ip> project -p <プロジェクト> ship linux
 # → ビルド → 資材構築 → Deck へ転送 → Steam 登録 → 起動 まで 1 コマンド

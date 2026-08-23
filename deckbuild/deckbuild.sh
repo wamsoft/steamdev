@@ -89,6 +89,15 @@ case "$CMD" in
     shell)
         run_in_container "bash" || true
         ;;
+    run)
+        # 非 CMake プロジェクト用: 任意のビルドコマンドをコンテナ内 (cwd=/work) で実行
+        shift || true
+        if [ $# -lt 1 ]; then
+            echo "usage: deckbuild.sh -s SRC run '<コマンド>'" >&2
+            exit 1
+        fi
+        run_in_container "$*"
+        ;;
     export)
         # install が無い/使えないプロジェクト用: ビルドツリー (docker volume 内で
         # ホストから見えない) から指定パスをソース側 .deckbuild/<preset>/ へ取り出す

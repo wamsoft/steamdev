@@ -47,7 +47,20 @@ PRESET=x64-linux BUILD_TYPE=Debug CMAKEOPT='-DFOO=ON' ./deckbuild.sh -s ... all
 
 # 個別ステップ / コンテナ内調査 / ビルドツリー破棄
 ./deckbuild.sh -s ... configure|build|install|shell|clean
+
+# 非 CMake プロジェクト: 任意のビルドコマンドをコンテナ内 (cwd=ソースルート) で実行
+./deckbuild.sh -s ... run 'make linux'
+./deckbuild.sh -s ... run './build.sh --release'
 ```
+
+## CMake 以外のビルドシステム
+
+`all`/`configure`/`build`/`install` の定型フローは CMake プリセット前提だが、
+**コンテナ環境自体はビルドシステムを問わない**。make / autotools / meson /
+自前スクリプト等は `run` で任意コマンドを流せばよい (CC/CXX は gcc-14 が
+環境変数で設定済み。素の `gcc` は 10 なので、Makefile 等が CC を尊重しない
+場合は明示指定する)。成果物がソースツリー側に出るなら stage sources で
+そのまま拾える。ビルドツリーをコンテナ volume 側に置く場合は `export` で取り出す。
 
 - ビルドツリー (`build/<preset>`) は docker named volume 上に置く
   (drvfs bind mount の遅い I/O を回避)。ソースパスごとに独立。
