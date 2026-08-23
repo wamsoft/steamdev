@@ -112,6 +112,13 @@ def _run_env(project: Project, target: str) -> dict:
     env["STEAMCTL_PROJECT_DIR"] = project.root
     env["STEAMCTL_STAGE_DIR"] = project.stage_dir(target)
     env["STEAMCTL_TARGET"] = target
+    # プロジェクトに .venv があればその python を優先させる
+    # (build/stage script の `python` がプロジェクト環境で解決される)
+    venv = os.path.join(project.root, ".venv")
+    venv_bin = os.path.join(venv, "Scripts" if sys.platform == "win32" else "bin")
+    if os.path.isdir(venv_bin):
+        env["VIRTUAL_ENV"] = venv
+        env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
     return env
 
 

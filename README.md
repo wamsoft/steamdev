@@ -29,11 +29,33 @@ Steam Deck / Steam Frame を制御するためのライブラリ + CLI。
 - mDNS 探索 / IP 直接指定の両対応。
 - SSH トンネル (正方向/逆方向) でアプリ側 REPL・ソケットサービスに接続可能。
 
-## セットアップ
+## セットアップ (ハイブリッド構成)
+
+**CLI: uv tool でグローバルに 1 つ** (日常操作用。全プロジェクト共通):
 
 ```
-pip install -e .          # または pip install paramiko zeroconf して PYTHONPATH=src
+uv tool install --editable <steamctl リポジトリ絶対パス> --with zeroconf
+uv tool update-shell     # 初回のみ (~/.local/bin を PATH へ)
 ```
+
+editable インストールなので **steamctl リポジトリを git pull するだけで更新が反映**
+される。`deckbuild/` の解決もリポジトリ実体を参照するため editable が前提。
+
+**ライブラリ: 使うプロジェクトだけ .venv + editable** (Python から Device /
+LocalForward 等を組み合わせる場合):
+
+```
+cd <プロジェクト>
+uv venv .venv
+uv pip install --python .venv/Scripts/python.exe -e <steamctl リポジトリ> zeroconf
+```
+
+プロジェクトに `.venv` があると、`steamctl project` の build/stage スクリプトは
+その venv の python を自動で優先する (PATH 先頭に `.venv/Scripts` を注入)。
+
+依存は paramiko のみ必須。mDNS 探索 (`discover` / 名前指定) を使う場合だけ
+zeroconf が要る (extras: `steamctl-deck[discovery]`)。IP 直指定運用なら不要。
+Python 3.11+ (tomllib 使用)。
 
 ## CLI
 

@@ -12,10 +12,20 @@ import socket
 import time
 from dataclasses import dataclass, field
 
-from zeroconf import ServiceBrowser, Zeroconf
-
 SERVICE_TYPE = "_steamos-devkit._tcp.local."
 DEFAULT_HTTP_PORT = 32000
+
+
+def _zeroconf():
+    """zeroconf は optional extra。無ければ導線を示して落とす。"""
+    try:
+        import zeroconf
+    except ImportError as e:
+        raise RuntimeError(
+            "mDNS 探索には zeroconf が必要です: pip install 'steamctl-deck[discovery]' "
+            "(IP 直指定なら不要)"
+        ) from e
+    return zeroconf
 
 
 @dataclass
@@ -28,7 +38,7 @@ class DiscoveredDevice:
 
 
 class _Listener:
-    def __init__(self, zc: Zeroconf):
+    def __init__(self, zc):
         self.zc = zc
         self.devices: dict[str, DiscoveredDevice] = {}
 
@@ -63,10 +73,10 @@ class _Listener:
 
 def discover(timeout: float = 3.0) -> list[DiscoveredDevice]:
     """Browse the LAN for devkit devices for ``timeout`` seconds."""
-    zc = Zeroconf()
+    zc = _zeroconf().Zeroconf()
     try:
         listener = _Listener(zc)
-        ServiceBrowser(zc, SERVICE_TYPE, listener)
+        _zeroconf().ServiceBrowser(zc, SERVICE_TYPE, listener)
         time.sleep(timeout)
         return list(listener.devices.values())
     finally:
@@ -75,14 +85,14 @@ def discover(timeout: float = 3.0) -> list[DiscoveredDevice]:
 
 def resolve_name(name: str, timeout: float = 3.0) -> DiscoveredDevice | None:
     """Resolve a single device by its mDNS instance name."""
-    zc = Zeroconf()
+    zc = _zeroconf().Zeroconf()
     try:
         listener = _Listener(zc)
         listener._decode(SERVICE_TYPE, f"{name}.{SERVICE_TYPE}")
         if name in listener.devices:
             return listener.devices[name]
         # fall back to a browse (name may differ in case)
-        ServiceBrowser(zc, SERVICE_TYPE, listener)
+        _zeroconf().ServiceBrowser(zc, SERVICE_TYPE, listener)
         deadline = time.time() + timeout
         while time.time() < deadline:
             for k, v in listener.devices.items():
