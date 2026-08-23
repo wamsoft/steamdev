@@ -84,6 +84,58 @@ with LocalForward(dev.ssh.get_transport(), 9222, "127.0.0.1", 9222):
     ...  # 127.0.0.1:9222 がデバイス側 9222 につながる
 ```
 
+## プロジェクト定義駆動パイプライン (`steamctl project`)
+
+プロジェクト側に `deckproject.toml` を置くと、ビルド (Win/Linux) → 資材構築
+(stage) → Deck へのデプロイ → 起動までを定義駆動で回せる:
+
+```
+steamctl project -p <dir> show              # 定義確認
+steamctl project -p <dir> build linux       # sniper コンテナで Linux ビルド (deckbuild/)
+steamctl project -p <dir> stage linux       # .deckstage/<target> に配布物を構築
+steamctl -d <deck> project -p <dir> deploy linux --start
+steamctl -d <deck> project -p <dir> ship linux    # build+stage+deploy+起動 一括
+```
+
+定義例 (krkrz の場合):
+
+```toml
+[project]
+gameid = "krkrz"                      # デプロイ時は krkrz_linux / krkrz_windows になる
+
+[targets.linux.build]
+kind = "deckbuild"                    # deckbuild/ の sniper コンテナビルド
+preset = "x64-linux"
+cmakeopt = "-DKRKRZ_USE_SJIS=YES"
+
+[targets.linux.stage]
+copy = [["bin/x64-linux/Release", "."], ["src/core/data", "data"]]
+script = ""                           # 独自資材構築が要るならコマンドを書く
+
+[targets.linux.deploy]
+command = "./krkrz64 data"
+
+[targets.windows.build]
+kind = "shell"                        # 既存のビルドフローをそのまま書く
+command = "make PRESET=x64-windows prebuild build install"
+
+[targets.windows.stage]
+copy = [["bin/x64-windows/Release", "."], ["src/core/data", "data"]]
+
+[targets.windows.deploy]
+command = "krkrz64.exe data"
+settings = { steam_play = "1", compat_tool = "proton-experimental" }
+```
+
+stage の `script` / build の `command` は cwd=プロジェクトルート、環境変数
+`STEAMCTL_PROJECT_DIR` / `STEAMCTL_STAGE_DIR` / `STEAMCTL_TARGET` 付きで実行される。
+
+## Linux ビルド環境 (deckbuild/)
+
+Steam Deck 互換の Linux バイナリを作るための Docker (WSL2) ビルド環境。
+Valve 公式 steamrt sniper SDK (glibc 2.31) ベース。詳細は
+[deckbuild/README.md](deckbuild/README.md)。
+
 ## 構成
 
 ```

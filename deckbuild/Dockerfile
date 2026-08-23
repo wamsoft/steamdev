@@ -12,8 +12,15 @@
 
 FROM registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
 
+USER root
+
+# vcpkg の一部ポート (libvpx 等) が要求するアセンブラを追加
+RUN apt-get update && apt-get install -y --no-install-recommends nasm yasm \
+    && rm -rf /var/lib/apt/lists/*
+
 ARG CMAKE_VERSION=3.31.7
-RUN curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
+RUN mkdir -p /opt /usr/local/bin \
+    && curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
         | tar -xz -C /opt \
     && for f in /opt/cmake-${CMAKE_VERSION}-linux-x86_64/bin/*; do \
         ln -sf "$f" /usr/local/bin/"$(basename "$f")"; done \

@@ -204,6 +204,31 @@ def cmd_screenshot(args) -> None:
     print(path)
 
 
+def cmd_project(args) -> None:
+    from . import project as prj
+    proj = prj.Project.load(args.project)
+    action = args.action
+    if action == "show":
+        print(f"project: {proj.gameid}  root: {proj.root}")
+        for name, t in proj.targets.items():
+            print(f"  target {name}: gameid={proj.target_gameid(name)} "
+                  f"build={t.build.get('kind', 'shell') if t.build else '-'} "
+                  f"command={t.deploy.get('command', '-')}")
+        return
+    target = args.target
+    if not target:
+        raise SystemExit(f"target required for {action} (available: {list(proj.targets)})")
+    if action in ("build", "ship"):
+        prj.build(proj, target)
+    if action in ("stage", "deploy", "ship"):
+        prj.stage(proj, target, clean=args.clean_stage)
+    if action in ("deploy", "ship"):
+        dev = get_device(args)
+        prj.deploy_target(proj, dev, target,
+                          start=args.start or action == "ship",
+                          clean_upload=args.clean)
+
+
 def cmd_ssh_command(args) -> None:
     # print the raw ssh command line for use by other tools (IDEs, scripts)
     dev = get_device(args)
@@ -296,6 +321,17 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("screenshot", help="take a gamescope screenshot")
     p.add_argument("-o", "--out", default="screenshot.png")
     p.set_defaults(func=cmd_screenshot)
+
+    p = sub.add_parser("project", help="deckproject.toml driven build/stage/deploy pipeline")
+    p.add_argument("-p", "--project", default=".",
+                   help="project dir (contains deckproject.toml) or the toml path")
+    p.add_argument("action", choices=["show", "build", "stage", "deploy", "ship"],
+                   help="ship = build + stage + deploy + start")
+    p.add_argument("target", nargs="?", help="target name, e.g. linux / windows")
+    p.add_argument("--start", action="store_true", help="launch after deploy")
+    p.add_argument("--clean", action="store_true", help="clean upload (rsync --delete)")
+    p.add_argument("--clean-stage", action="store_true", help="wipe stage dir first")
+    p.set_defaults(func=cmd_project)
 
     p = sub.add_parser("ssh-command", help="print the ssh command line for this device")
     p.set_defaults(func=cmd_ssh_command)
