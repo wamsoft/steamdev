@@ -14,9 +14,11 @@ to send (staging), and how to launch on the Steam Deck::
     cmakeopt = "-DKRKRZ_USE_SJIS=YES"
 
     [targets.linux.stage]
-    copy = [
-        ["bin/x64-linux/Release", "."],
-        ["src/core/data", "data"],
+    # krkrz_android app-config / krkrz_web web-config の assetPack.sources と同書式
+    sources = [
+        { type = "mirror", from = "bin/x64-linux/Release", to = "" },
+        { type = "mirror", from = "src/core/data", to = "data",
+          exclude = ["**/*.psd", "**/*.bak"] },
     ]
     script = "python tools/stage_extra.py"   # optional, runs with cwd=project dir
 
@@ -39,7 +41,6 @@ Build/stage scripts run with cwd = project dir and env vars
 
 from __future__ import annotations
 
-import glob as globmod
 import logging
 import os
 import shutil
@@ -169,44 +170,44 @@ def build(project: Project, target: str) -> None:
         raise ValueError(f"target {target}: unknown build.kind {kind!r}")
 
 
-def _copy_entry(project: Project, stage_dir: str, src_rel: str, dst_rel: str) -> int:
-    """Copy one stage rule entry; returns number of files copied."""
-    dst_base = os.path.normpath(os.path.join(stage_dir, dst_rel))
-    src_abs = os.path.normpath(os.path.join(project.root, src_rel))
-    matches = globmod.glob(src_abs) if any(c in src_rel for c in "*?[") else [src_abs]
-    count = 0
-    for src in matches:
-        if os.path.isdir(src):
-            shutil.copytree(src, dst_base, dirs_exist_ok=True)
-            count += sum(len(files) for _, _, files in os.walk(src))
-        elif os.path.isfile(src):
-            os.makedirs(dst_base if dst_rel.endswith(("/", "\\")) else os.path.dirname(dst_base) or stage_dir,
-                        exist_ok=True)
-            dst = os.path.join(dst_base, os.path.basename(src)) \
-                if os.path.isdir(dst_base) or dst_rel.endswith(("/", "\\")) else dst_base
-            shutil.copy2(src, dst)
-            count += 1
-        else:
-            raise FileNotFoundError(f"stage copy source not found: {src}")
-    return count
+def _stage_sources(t: Target) -> list:
+    """stage 定義から sources リストを得る。
+
+    推奨は krkrz_android app-config / krkrz_web web-config と同書式の ``sources``。
+    旧 ``copy = [[src, dst], ...]`` は mirror エントリに変換して互換維持する。
+    """
+    sources = list(t.stage.get("sources", []))
+    for entry in t.stage.get("copy", []):
+        src_rel, dst_rel = entry
+        if any(c in src_rel for c in "*?["):
+            raise ValueError(
+                f"stage copy の glob ({src_rel!r}) は廃止。sources 書式の "
+                "include/exclude を使ってください")
+        dst_rel = (dst_rel or "").strip("./\\")
+        sources.append({"type": "mirror", "from": src_rel, "to": dst_rel})
+    return sources
 
 
 def stage(project: Project, target: str, clean: bool = False) -> str:
+    from . import stage as stage_engine
     t = project.target(target)
     stage_dir = project.stage_dir(target)
     if clean and os.path.isdir(stage_dir):
         shutil.rmtree(stage_dir)
     os.makedirs(stage_dir, exist_ok=True)
-    total = 0
-    for entry in t.stage.get("copy", []):
-        src_rel, dst_rel = entry
-        total += _copy_entry(project, stage_dir, src_rel, dst_rel)
-    logger.info("staged %d files into %s", total, stage_dir)
+    sources = _stage_sources(t)
+    if sources:
+        ctx = {"PROJECT_DIR": project.root}
+        stats = stage_engine.run_copy_rules(sources, stage_dir, project.root, ctx)
+        logger.info(
+            "staged %d files into %s (linked %d / copied %d / unchanged %d / removed %d)",
+            stats["total"], stage_dir, stats["linked"], stats["copied"],
+            stats["unchanged"], stats["removed"])
     script = t.stage.get("script")
     if script:
         _run_command(script, project, target)
     if not os.listdir(stage_dir):
-        raise RuntimeError(f"stage dir is empty: {stage_dir} (no copy rules / script output?)")
+        raise RuntimeError(f"stage dir is empty: {stage_dir} (no sources / script output?)")
     return stage_dir
 
 

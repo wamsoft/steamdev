@@ -51,19 +51,55 @@ gameid の制約: `^[A-Za-z_][A-Za-z0-9_.]+$`。
 ## [targets.*.stage]
 
 デプロイ対象フォルダ `.deckstage/<target>/` を合成するルール。
+**krkrz_android (app-config.json) / krkrz_web (web-config.json) の
+`assetPack.sources` と同書式・同セマンティクス**。
 
 | キー | 意味 |
 |---|---|
-| `copy` | `[["コピー元", "コピー先"], ...]` の配列。パスはプロジェクトルート相対。コピー元はファイル/フォルダ/glob。コピー先は stage ディレクトリ相対 (`"."` = 直下) |
-| `script` | copy 適用後に実行する任意コマンド。独自の資材構築 (変換・生成・圧縮等) はここで行う |
+| `sources` | ソース定義の配列 (下記)。複数ソースを stage ディレクトリへマージ配置 |
+| `script` | sources 適用後に実行する任意コマンド。glob で表現できない資材加工 (生成・変換等) はここで行う |
+| `copy` | (旧書式) `[["元", "先"], ...]`。内部で mirror エントリに変換される。新規は sources を使う |
 
-`script` は cwd=プロジェクトルート、以下の環境変数付きで実行される:
+### sources エントリ
+
+```toml
+sources = [
+    { type = "mirror", from = "bin/x64-linux/Release", to = "" },
+    { type = "mirror", from = "src/core/data", to = "data", exclude = ["**/*.bak", "**/*.psd"] },
+    { type = "flatten", from = "archive", include = ["*.xp3"] },
+]
+```
+
+※ TOML のインラインテーブルは 1 行で書くこと (複数行に割るとパースエラー)。
+
+| キー | 意味 |
+|---|---|
+| `type` | `"mirror"` = ツリー構造を保って配置 / `"flatten"` = 階層を潰してファイル名だけで配置 |
+| `from` | ソースフォルダ。プロジェクトルート相対 or 絶対。`${VAR}` 展開あり (`${PROJECT_DIR}` + 環境変数) |
+| `to` | 配置先 (stage 相対、`""` = 直下)。省略時: mirror+相対→from のパス / mirror+絶対→末尾フォルダ名 / flatten→ルート |
+| `include` | Ant 風 glob の配列 (既定 `["**/*"]`)。`**/` = 階層跨ぎ、`*` = `/` 以外の 0 文字以上、`?` = 1 文字 |
+| `exclude` | 除外 glob の配列 |
+| `comment` | 自由記述 (無視される) |
+
+挙動 (krkrz_web `tools/stage_web.py` / krkrz_android gradle `runCopyRules` と同一):
+
+- **重複配置先は先勝ち** — 後のソースが同じパスに来ても上書きしない
+  (差分オーバーレイは先に書く)
+- **剪定** — sources の期待に無い既存ファイルは stage から削除される
+  (script 生成物も一旦消えるが、直後の script 再実行で戻る)
+- **増分** — サイズ + mtime(秒) が一致するファイルはスキップ
+- **ハードリンク自動判定** — 同一ボリュームなら os.link (実体複製なし・即時)、
+  クロスボリューム等はファイル単位で実コピーにフォールバック。
+  ハードリンクのため **stage 内のファイルを直接編集すると元ファイルも変わる**点に注意
+
+`script` は cwd=プロジェクトルート、以下の環境変数付きで実行される
+(プロジェクトに `.venv` があればその python が優先される):
 
 - `STEAMCTL_PROJECT_DIR` — プロジェクトルート絶対パス
 - `STEAMCTL_STAGE_DIR` — stage ディレクトリ絶対パス
 - `STEAMCTL_TARGET` — ターゲット名
 
-copy は増分 (上書き) コピー。完全に作り直したいときは `--clean-stage`。
+完全に作り直したいときは `--clean-stage`。
 
 ## [targets.*.deploy]
 

@@ -74,8 +74,13 @@ kind = "deckbuild"                    # sniper コンテナで Linux ビルド
 preset = "x64-linux"                  # CMake プリセット名
 
 [targets.linux.stage]
-copy = [["bin/x64-linux/Release", "."], ["data", "data"]]
-script = ""                           # 独自の資材構築があればコマンドを書く
+# 複数ソースをマージ配置 (krkrz_android/krkrz_web の assetPack.sources と同書式。
+# mirror/flatten + include/exclude glob、重複は先勝ち、同一ボリュームはハードリンク)
+sources = [
+    { type = "mirror", from = "bin/x64-linux/Release", to = "" },
+    { type = "mirror", from = "data", to = "data", exclude = ["**/*.psd"] },
+]
+script = ""                           # glob で書けない資材加工があればコマンドを書く
 
 [targets.linux.deploy]
 command = "./mygame data"             # Deck 上での起動コマンド
@@ -85,7 +90,10 @@ kind = "shell"                        # 既存のビルドフローをそのま�
 command = "make PRESET=x64-windows prebuild build install"
 
 [targets.windows.stage]
-copy = [["bin/x64-windows/Release", "."], ["data", "data"]]
+sources = [
+    { type = "mirror", from = "bin/x64-windows/Release", to = "" },
+    { type = "mirror", from = "data", to = "data" },
+]
 
 [targets.windows.deploy]
 command = "mygame.exe data"
