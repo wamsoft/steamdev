@@ -1,102 +1,164 @@
 # steamctl — headless Steam Deck (SteamOS devkit) control
 
-Valve 公式 SteamOS Devkit Client (MIT) のプロトコルを解析し、GUI なしで
-Steam Deck / Steam Frame を制御するためのライブラリ + CLI。
-エージェント (Claude 等) からの自動デプロイ・リモート操作を想定した設計。
+GUI なしで Steam Deck を制御するツール。ローカルのプロジェクトをビルドして
+Deck に送り込み、起動・観測・リモートデバッグまでをコマンドラインだけで回せる。
+エージェント (Claude 等) からの自動運転を想定した設計。
 
-## ドキュメント
+```
+steamctl -d <deck-ip> project -p <プロジェクト> ship linux
+# → ビルド → 資材構築 → Deck へ転送 → Steam 登録 → 起動 まで 1 コマンド
+```
 
-| ドキュメント | 内容 |
+---
+
+# ユーザーガイド
+
+## 1. 必要なもの
+
+| 要件 | 備考 |
 |---|---|
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | devkit 制御プロトコル仕様 (公式クライアント解析結果) |
-| [docs/DECKPROJECT.md](docs/DECKPROJECT.md) | deckproject.toml リファレンス (プロジェクト定義) |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 日常の開発サイクル・デバッグ手順・ハマりどころ |
-| [deckbuild/README.md](deckbuild/README.md) | Steam Deck 向け Linux ビルド環境 (sniper SDK コンテナ) |
+| Windows ホスト + [uv](https://docs.astral.sh/uv/) | `scoop install uv` / `winget install astral-sh.uv` 等 |
+| Steam Deck (開発者モード有効) | 設定 → システム → 開発者モードを有効化 |
+| WSL2 + docker | **Linux ビルドを行う場合のみ** (Ubuntu 内に docker を導入) |
+| Python 3.11+ | uv が自動で用意するので通常は意識不要 |
 
-実機 (Steam Deck / SteamOS 3.8.16) で検証済み:
+## 2. 初期セットアップ (ホスト側、1 回だけ)
 
-- 基本機能: mDNS 探索、既存鍵での SSH 接続、sync-utils、status、
-  deploy → run → delete、screenshot、exec --stream、logs 回収、
-  SSH トンネル正方向 (-L) / 逆方向 (-R)
-- パイプライン: krkrz を Windows ビルド (Proton 10.0) / Linux ビルド
-  (sniper SDK コンテナ → ネイティブ実行) の両方で Deck 上に動作確認
-
-## 特徴
-
-- 公式クライアントと**同じ SSH 鍵を再利用** (`%LOCALAPPDATA%\steamos-devkit\...\devkit_rsa`)。
-  公式クライアントでペアリング済みのデバイスにはそのまま接続できる。
-- Windows では公式クライアント同梱の cygwin ssh/rsync (なければ msys2) を自動検出。
-- mDNS 探索 / IP 直接指定の両対応。
-- SSH トンネル (正方向/逆方向) でアプリ側 REPL・ソケットサービスに接続可能。
-
-## セットアップ (ハイブリッド構成)
-
-**CLI: uv tool でグローバルに 1 つ** (日常操作用。全プロジェクト共通):
-
-```
+```powershell
+# CLI をグローバル導入 (editable: steamctl リポジトリを git pull すれば更新反映)
 uv tool install --editable <steamctl リポジトリ絶対パス> --with zeroconf
-uv tool update-shell     # 初回のみ (~/.local/bin を PATH へ)
+uv tool update-shell        # ~/.local/bin を PATH へ (初回のみ、要シェル再起動)
+
+steamctl --version          # 動作確認
 ```
 
-editable インストールなので **steamctl リポジトリを git pull するだけで更新が反映**
-される。`deckbuild/` の解決もリポジトリ実体を参照するため editable が前提。
+> editable インストールが前提。`deckbuild/` (Linux ビルド環境) の解決が
+> リポジトリ実体を参照するため、通常のインストールでは動かない。
 
-**ライブラリ: 使うプロジェクトだけ .venv + editable** (Python から Device /
-LocalForward 等を組み合わせる場合):
+### Deck とのペアリング
 
+```powershell
+steamctl discover                    # LAN 上の Deck を探す (IP がわかるなら省略可)
+steamctl -d <deck-ip> register       # 初回のみ。Deck 側で承認ダイアログが出る
+steamctl -d <deck-ip> sync-utils     # デバイス側ヘルパスクリプト転送 (初回必須)
+steamctl -d <deck-ip> status         # 疎通確認 (デバイス状態が JSON で返れば OK)
 ```
+
+公式 SteamOS Devkit Client でペアリング済みの Deck なら **register は不要**
+(同じ SSH 鍵を共有するため、そのまま接続できる)。
+
+毎回 `-d` を打ちたくない場合は環境変数で固定: `$env:STEAMCTL_DEVICE = "<deck-ip>"`
+
+### Linux ビルド環境 (Linux ネイティブ版を作る場合のみ)
+
+WSL2 の Ubuntu に docker を入れた上で:
+
+```bash
+# WSL 内で。Valve 公式 sniper SDK ベースのビルドイメージを作成 (初回のみ、数 GB DL)
+bash <steamctl>/deckbuild/deckbuild.sh image
+```
+
+## 3. プロジェクト側の手順 (プロジェクトごと)
+
+### 3-1. deckproject.toml を書く
+
+プロジェクトのルートに配置。ターゲット (linux / windows) ごとに
+「どうビルドするか / 何を送るか / どう起動するか」を書く:
+
+```toml
+[project]
+gameid = "mygame"                     # デプロイ時は mygame_linux / mygame_windows になる
+
+[targets.linux.build]
+kind = "deckbuild"                    # sniper コンテナで Linux ビルド
+preset = "x64-linux"                  # CMake プリセット名
+
+[targets.linux.stage]
+copy = [["bin/x64-linux/Release", "."], ["data", "data"]]
+script = ""                           # 独自の資材構築があればコマンドを書く
+
+[targets.linux.deploy]
+command = "./mygame data"             # Deck 上での起動コマンド
+
+[targets.windows.build]
+kind = "shell"                        # 既存のビルドフローをそのまま書く
+command = "make PRESET=x64-windows prebuild build install"
+
+[targets.windows.stage]
+copy = [["bin/x64-windows/Release", "."], ["data", "data"]]
+
+[targets.windows.deploy]
+command = "mygame.exe data"
+settings = { steam_play = "1", compat_tool = "proton-stable" }   # Proton で実行
+```
+
+全キーの説明は [docs/DECKPROJECT.md](docs/DECKPROJECT.md)。
+実運用例は krkrz_dev の `deckproject.toml` を参照。
+
+### 3-2. (任意) プロジェクト .venv — Python から steamctl を使う場合
+
+検証スクリプト等で `Device` / `LocalForward` を import したいプロジェクトだけ:
+
+```powershell
 cd <プロジェクト>
 uv venv .venv
 uv pip install --python .venv/Scripts/python.exe -e <steamctl リポジトリ> zeroconf
 ```
 
-プロジェクトに `.venv` があると、`steamctl project` の build/stage スクリプトは
-その venv の python を自動で優先する (PATH 先頭に `.venv/Scripts` を注入)。
+`.venv` があると `steamctl project` の build/stage スクリプトは自動で
+その venv の python を使う (PATH 先頭に `.venv/Scripts` が注入される)。
+`.venv` は .gitignore に入れておくこと。
 
-依存は paramiko のみ必須。mDNS 探索 (`discover` / 名前指定) を使う場合だけ
-zeroconf が要る (extras: `steamctl-deck[discovery]`)。IP 直指定運用なら不要。
-Python 3.11+ (tomllib 使用)。
+### 3-3. 動かす
 
-## CLI
-
-```
-steamctl discover                       # LAN 上の devkit を mDNS 探索
-steamctl -d 192.168.1.30 register       # 初回ペアリング (デバイス側で承認)
-steamctl -d 192.168.1.30 info           # /properties.json
-steamctl -d 192.168.1.30 sync-utils     # デバイス側ヘルパスクリプトを転送 (初回必須)
-steamctl -d 192.168.1.30 status         # デバイス状態 (JSON)
-
-# デプロイ & 起動
-steamctl -d 192.168.1.30 deploy --gameid mygame --dir D:/build/mygame \
-    --command "mygame.sh -console" --clean --start
-
-steamctl -d 192.168.1.30 run mygame     # 起動
-steamctl -d 192.168.1.30 list           # インストール済み一覧
-steamctl -d 192.168.1.30 delete mygame
-
-# リモート実行・観測
-steamctl -d 192.168.1.30 exec -- uname -a
-steamctl -d 192.168.1.30 exec --stream -- tail -F ~/.local/share/Steam/logs/console-linux.txt
-steamctl -d 192.168.1.30 shell          # 対話シェル
-steamctl -d 192.168.1.30 screenshot -o shot.png
-steamctl -d 192.168.1.30 logs --out ./devkit-logs
-
-# アプリ側 REPL / socket サービスへのトンネル
-steamctl -d 192.168.1.30 tunnel -L 9222:9222          # host:9222 -> deck:9222
-steamctl -d 192.168.1.30 tunnel -R 8000:8000          # deck:8000 -> host:8000
+```powershell
+steamctl project -p <プロジェクト> show                    # 定義の確認
+steamctl -d <deck> project -p <プロジェクト> ship linux    # ビルド→転送→起動 一括
+steamctl -d <deck> project -p <プロジェクト> ship windows
 ```
 
-デバイス指定は `-d` の代わりに環境変数 `STEAMCTL_DEVICE` でも可。
+個別ステップ: `build` / `stage` / `deploy [--start]`。
+オプション: `--clean-stage` (stage 作り直し) / `--clean` (デバイス側の余分を削除)。
 
-## ライブラリ
+## 4. 日常操作の早見表
+
+```powershell
+steamctl status                     # デバイス状態
+steamctl list                       # 入っているタイトル一覧
+steamctl run <gameid>               # 起動 / 前面化
+steamctl delete <gameid>            # 削除
+steamctl screenshot -o shot.png     # 画面キャプチャ
+steamctl logs --out ./devkit-logs   # Steam ログ・クラッシュダンプ回収
+steamctl exec -- <コマンド>          # SSH ワンライナー
+steamctl exec --stream -- tail -F ~/.local/share/Steam/logs/console-linux.txt
+steamctl shell                      # 対話シェル
+steamctl tunnel -L 18899:8899       # ポートフォワード (アプリの REPL 等へ)
+```
+
+開発サイクルの詳細・リモートデバッグ (gdbserver / Proton+msvsmon / krkrz -replweb
+REPL 駆動)・実機で確認済みのハマりどころ一覧は
+**[docs/WORKFLOW.md](docs/WORKFLOW.md)** を参照。
+
+## 5. うまくいかないとき
+
+| 症状 | 見る場所 |
+|---|---|
+| デプロイしたのに起動しない | [docs/WORKFLOW.md](docs/WORKFLOW.md) のハマりどころ表 (未インストール Proton 指定が定番) |
+| Linux バイナリが即死 | 同上 (共有ライブラリの soname / LD_LIBRARY_PATH) |
+| ビルドが通らない | [deckbuild/README.md](deckbuild/README.md) (コンパイラ差し替え等) |
+| 接続できない | `steamctl discover` → `info` → `status` の順に切り分け |
+
+---
+
+# 開発者向け情報
+
+## ライブラリ API
 
 ```python
 from steamctl import Device, deploy, DeploySpec, LocalForward
 
 dev = Device("192.168.1.30")            # or Device.from_name("steamdeck")
-dev.register()                          # 初回のみ
 dev.sync_utils()                        # デバイス側スクリプト転送 (初回必須)
-
 print(dev.status().raw["steam_status"])
 
 deploy(dev, DeploySpec(
@@ -104,7 +166,7 @@ deploy(dev, DeploySpec(
     local_dir=r"D:/build/mygame",
     argv=["mygame.sh -console"],        # コマンドライン全体を 1 文字列で
     env={"PROTON_LOG": "1"},
-    settings={"compat_tool": "proton-experimental", "steam_play": "1"},
+    settings={"compat_tool": "proton-stable", "steam_play": "1"},
     start_after=True,
 ))
 
@@ -112,69 +174,38 @@ deploy(dev, DeploySpec(
 for line in dev.stream("tail -F ~/.local/share/Steam/logs/console-linux.txt"):
     print(line)
 
-# アプリの REPL ポートへトンネル
-with LocalForward(dev.ssh.get_transport(), 9222, "127.0.0.1", 9222):
-    ...  # 127.0.0.1:9222 がデバイス側 9222 につながる
+# アプリの REPL ポートへトンネル (逆方向は RemoteForward)
+with LocalForward(dev.ssh.get_transport(), 18899, "127.0.0.1", 8899):
+    ...  # 127.0.0.1:18899 がデバイス側 8899 につながる
 ```
 
-## プロジェクト定義駆動パイプライン (`steamctl project`)
+低レベル API: `dev.run()` (SSH 実行) / `dev.run_json()` / `dev.rsync()` /
+`dev.sftp()` / `dev.rpc()` (Steam クライアント RPC) / `dev.screenshot()`。
 
-プロジェクト側に `deckproject.toml` を置くと、ビルド (Win/Linux) → 資材構築
-(stage) → Deck へのデプロイ → 起動までを定義駆動で回せる:
+## 仕組みの要点
 
-```
-steamctl project -p <dir> show              # 定義確認
-steamctl project -p <dir> build linux       # sniper コンテナで Linux ビルド (deckbuild/)
-steamctl project -p <dir> stage linux       # .deckstage/<target> に配布物を構築
-steamctl -d <deck> project -p <dir> deploy linux --start
-steamctl -d <deck> project -p <dir> ship linux    # build+stage+deploy+起動 一括
-```
+- **プロトコル**: mDNS (`_steamos-devkit._tcp`) で発見 → HTTP :32000 でペアリング
+  (公開鍵 POST) → 以降は SSH (コマンド実行 / rsync 転送 / トンネル) と、デバイス内
+  `steam.pipe` IPC 経由の Steam クライアント制御。全容は
+  [docs/PROTOCOL.md](docs/PROTOCOL.md) (公式クライアント解析結果)
+- **SSH 鍵は公式クライアントと共有**
+  (`%LOCALAPPDATA%\steamos-devkit\steamos-devkit\devkit_rsa`)。どちらで
+  ペアリングしても相互に使える
+- **rsync/ssh** は Windows では公式クライアント同梱の cygwin ツール
+  (なければ msys2) を自動検出
+- **Linux ビルド** は Valve 公式 steamrt sniper SDK (Debian 11 / glibc 2.31)
+  コンテナ。SteamOS ネイティブでも Steam Linux Runtime コンテナでも動く
+  バイナリになる。コンパイラは SDK 同梱の gcc-14 が既定。詳細は
+  [deckbuild/README.md](deckbuild/README.md)
+- **依存**: 必須は paramiko のみ。zeroconf は extras `[discovery]`
+  (mDNS 探索用、IP 直指定なら不要)。Python 3.11+ (tomllib)
 
-定義例 (krkrz の場合):
-
-```toml
-[project]
-gameid = "krkrz"                      # デプロイ時は krkrz_linux / krkrz_windows になる
-
-[targets.linux.build]
-kind = "deckbuild"                    # deckbuild/ の sniper コンテナビルド
-preset = "x64-linux"
-cmakeopt = "-DKRKRZ_USE_SJIS=YES"
-
-[targets.linux.stage]
-copy = [["bin/x64-linux/Release", "."], ["src/core/data", "data"]]
-script = ""                           # 独自資材構築が要るならコマンドを書く
-
-[targets.linux.deploy]
-command = "./krkrz64 data"
-
-[targets.windows.build]
-kind = "shell"                        # 既存のビルドフローをそのまま書く
-command = "make PRESET=x64-windows prebuild build install"
-
-[targets.windows.stage]
-copy = [["bin/x64-windows/Release", "."], ["src/core/data", "data"]]
-
-[targets.windows.deploy]
-command = "krkrz64.exe data"
-settings = { steam_play = "1", compat_tool = "proton-experimental" }
-```
-
-stage の `script` / build の `command` は cwd=プロジェクトルート、環境変数
-`STEAMCTL_PROJECT_DIR` / `STEAMCTL_STAGE_DIR` / `STEAMCTL_TARGET` 付きで実行される。
-
-## Linux ビルド環境 (deckbuild/)
-
-Steam Deck 互換の Linux バイナリを作るための Docker (WSL2) ビルド環境。
-Valve 公式 steamrt sniper SDK (glibc 2.31) ベース。詳細は
-[deckbuild/README.md](deckbuild/README.md)。
-
-## 構成
+## リポジトリ構成
 
 ```
 src/steamctl/
   keys.py        # devkit RSA 鍵 (公式クライアントと共有)
-  discovery.py   # mDNS (_steamos-devkit._tcp) 探索
+  discovery.py   # mDNS (_steamos-devkit._tcp) 探索 (zeroconf は遅延 import)
   device.py      # Device: HTTP ペアリング / SSH 実行 / rsync / スクリーンショット等
   deploy.py      # タイトルデプロイフロー (prepare-upload → rsync → create-shortcut)
   project.py     # deckproject.toml 駆動の build/stage/deploy パイプライン
@@ -183,3 +214,24 @@ src/steamctl/
 deckbuild/       # sniper SDK コンテナによる Linux ビルド環境 (Dockerfile + ラッパ)
 docs/            # プロトコル仕様 / 定義リファレンス / ワークフロー
 ```
+
+## ドキュメント索引
+
+| ドキュメント | 内容 |
+|---|---|
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | devkit 制御プロトコル仕様 (公式クライアント解析結果) |
+| [docs/DECKPROJECT.md](docs/DECKPROJECT.md) | deckproject.toml リファレンス |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 開発サイクル・デバッグ手順・ハマりどころ |
+| [deckbuild/README.md](deckbuild/README.md) | Linux ビルド環境の詳細 |
+
+## 検証済み状況
+
+実機 (Steam Deck / SteamOS 3.8.16) で検証済み:
+
+- 基本機能: mDNS 探索、既存鍵での SSH 接続、sync-utils、status、
+  deploy → run → delete、screenshot、exec --stream、logs 回収、
+  SSH トンネル正方向 (-L) / 逆方向 (-R)
+- パイプライン: krkrz を Windows ビルド (Proton 10.0) / Linux ビルド
+  (sniper SDK コンテナ → ネイティブ実行) の両方で Deck 上に動作確認
+- REPL 連携: krkrz -replweb をトンネル経由で駆動 (TJS 評価 / キー入力注入 /
+  エンジン内キャプチャ回収) を確認
