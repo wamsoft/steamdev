@@ -1,6 +1,11 @@
 # SteamOS Devkit 制御プロトコル仕様
 
-Valve 公式 SteamOS Devkit Client (MIT License) の解析結果。
+Valve 公式 SteamOS Devkit Client の解析結果。
+
+ライセンス: 上流リポジトリ (gitlab.steamos.cloud/devkit/steamos-devkit) の
+トップレベル LICENSE が MIT (Copyright (c) 2017-2022 Valve Software inc.,
+Collabora Ltd)。配布バンドル内で同文ヘッダを持つのは devkit_client/__init__.py
+のみで、devkit-utils 等は上流リポジトリの LICENSE がカバーする形。
 クライアント本体は Python 製で、GUI (imgui) は薄いラッパに過ぎず、
 実際の制御は以下の 3 層で完結している。
 
