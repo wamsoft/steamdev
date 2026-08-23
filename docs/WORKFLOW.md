@@ -70,6 +70,30 @@ steamctl tunnel -R 18888:8000
 
 ライブラリからは `LocalForward` / `RemoteForward` (with 文対応)。
 
+### 実例: krkrz の -replweb を REPL 駆動する (実機検証済み)
+
+krkrz を `-replweb` 付きで起動すると Deck の 127.0.0.1:8899 に HTTP+SSE サーバが
+立つ (localhost バインドなのでトンネル必須)。
+
+1. 起動コマンドに `-replweb` を含めてデプロイ:
+   `deploy.command = "./krkrz data -replweb -loglevel=info"`
+   **注意: 起動引数はショートカット登録時に Steam 側へ焼き込まれる**ため、
+   デバイス上の `<gameid>-argv.json` を書き換えても反映されない。引数変更は
+   再デプロイ (create-shortcut のやり直し) で行う。
+2. トンネル: `steamctl tunnel -L 18899:8899` (ライブラリなら `LocalForward`)
+3. TJS 評価: `POST http://127.0.0.1:18899/cmd` に式を body で送る。
+   **応答 body は受理ステータスのみ ("0"/"1")。評価結果は SSE
+   `GET /events` にログ (`{"cls":"result","text":"=> ..."}`) として流れる**
+   (直近 2000 行のバックログ付きなので後から接続しても拾える)。
+4. Agent API で操作・観測:
+   - `Agent.keyPress(13)` / `Agent.click(x,y)` — 入力注入 (実入力と同経路)
+   - `Agent.captureScreen('/tmp/cap.png')` — エンジン内キャプチャ (次フレーム保存)
+   - PNG は sftp で回収して目視確認
+5. アプリ側の追加 API は `WebServer.register` で公開できる (skill krkrz-webui 参照)
+
+検証済みフロー: 評価 (`1+2*3 => 7`) → Enter 注入でデモ起動 → captureScreen →
+ESC 注入で復帰、まで全て動作。
+
 ### リモートデバッガ
 
 - Linux ネイティブ: settings `gdbserver = "1"` → `<deck-ip>:2345` に gdb 直結
