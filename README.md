@@ -120,8 +120,7 @@ settings = { steam_play = "1", compat_tool = "proton-stable" }   # Proton で実
 
 - **krkrz_dev** (https://github.com/wamsoft/krkrz_dev) — 吉里吉里Z の開発用
   umbrella リポジトリ。Win (Proton) / Linux (ネイティブ) 両ターゲットの
-  実運用例で、ルートの `deckproject.toml` を参照 (※ 公開リポジトリへの反映は
-  今後の更新で追加予定)
+  実運用例で、ルートの `deckproject.toml` を参照
 - **devilutionX** — 外部 CMake プロジェクトへの非侵襲適用例
   ([examples/devilutionx](examples/devilutionx/))
 
@@ -254,6 +253,15 @@ examples/        # 適用例 (devilutionx: 外部 CMake プロジェクトへの
 | [docs/DECKPROJECT.md](docs/DECKPROJECT.md) | deckproject.toml リファレンス |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 開発サイクル・デバッグ手順・ハマりどころ |
 | [deckbuild/README.md](deckbuild/README.md) | Linux ビルド環境の詳細 |
+
+## ライセンス
+
+本ソフトウェアは **Unlicense** (パブリックドメイン相当) — [LICENSE](LICENSE) 参照。
+
+解析対象である Valve 公式 SteamOS Devkit Client は MIT License
+(Copyright 2017-2022 Valve Software inc., Collabora Ltd)。プロトコル定数等の
+由来部分の帰属表示は LICENSE 内の NOTICE に記載。Steam / Steam Deck / SteamOS
+は Valve Corporation の商標であり、本ツールは非公式で Valve とは無関係。
 
 ## 検証済み状況
 
