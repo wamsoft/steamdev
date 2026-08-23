@@ -15,6 +15,24 @@ steamctl -d <deck> project -p <dir> ship <target>               # build+stage+de
 オプション: `--clean-stage` (stage ディレクトリを作り直す)、`--clean` (デバイス側の
 余分なファイルを削除する rsync --delete アップロード)。
 
+## 資材が Deck に届くまでの流れ (責務分担)
+
+```
+[build]  成果物を作るだけ
+   kind=deckbuild → sniper コンテナで cmake install → bin/<preset>/<build_type>/
+   kind=shell     → 任意コマンド (make install 等)
+        ↓
+[stage]  .deckstage/<target>/ に「デプロイされるフォルダの完全な姿」を合成
+   ① sources: 複数ソースをマージ配置 (mirror/flatten + glob、ハードリンク)
+   ② script : glob で表現できない加工 (生成・変換・soname 補完等)
+        ↓
+[deploy] .deckstage/<target>/ を丸ごと rsync → ~/devkit-game/<gameid>/
+   + 起動コマンド・env・settings を Steam に登録 (運ぶだけ、選別しない)
+```
+
+- 資材構築の独自ルールは **すべて stage (sources + script) に集約**する
+- 転送は rsync なので 2 回目以降は差分のみ。デバイス側の残骸掃除は `--clean`
+
 ## 全体構造
 
 ```toml
@@ -25,7 +43,7 @@ gameid = "mygame"          # ベース ID。省略時はフォルダ名。
 
 [targets.<name>]           # ターゲットは任意個 (例: linux / windows)
   [targets.<name>.build]   # 省略可: 省略時 build はスキップ
-  [targets.<name>.stage]   # 省略可だが copy か script どちらかは実質必須
+  [targets.<name>.stage]   # 省略可だが sources か script どちらかは実質必須
   [targets.<name>.deploy]  # deploy する場合は command が必須
 ```
 
