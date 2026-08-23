@@ -26,7 +26,8 @@ steamctl -d <deck-ip> project -p <プロジェクト> ship linux
 |---|---|
 | Windows ホスト + [uv](https://docs.astral.sh/uv/) | `scoop install uv` / `winget install astral-sh.uv` 等 |
 | Steam Deck (開発者モード有効) | 設定 → システム → 開発者モードを有効化 |
-| WSL2 + docker | **Linux ビルドを行う場合のみ** (Ubuntu 内に docker を導入) |
+| Visual Studio (C++ ワークロード) | **Windows ターゲットをビルドする場合のみ**。CMake / Ninja / MSVC の環境が既にあることを想定 (通常は VS のインストールで一緒に導入済み)。ビルドコマンド自体は deckproject.toml に各プロジェクトの流儀で書く |
+| WSL2 + docker | **Linux ビルドを行う場合のみ** (Ubuntu 内に docker を導入)。CMake/コンパイラ等はコンテナ内に同梱されるのでホスト側の準備は不要 |
 | Python 3.11+ | uv が自動で用意するので通常は意識不要 |
 
 ## 2. 初期セットアップ (ホスト側、1 回だけ)
