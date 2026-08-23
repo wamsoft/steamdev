@@ -174,6 +174,41 @@ NEEDED に「SDK にしか無い .so」が出てきたら④の注意事項の�
 (ビルド環境 = 実行環境)。ネイティブ実行したいなら NEEDED を確認して
 SteamOS に無いものを静的化するか同梱する。
 
+### install が無い / 条件付き / 想定外の場所に入る場合
+
+deckbuild は「configure → build → `cmake --install` → `bin/<preset>/<build_type>/`」
+を標準フローとするが、上流の install 事情は様々。ケース別に:
+
+**A. 想定外の場所にインストールされる** — 問題ない。install 先のレイアウトが
+どうであれ、deckproject.toml の stage `sources` で好きな形に組み替えられる。
+例 (devilutionX): バイナリは `bin/`、資材は `share/diasurgical/devilutionx/` に
+入るので、stage で両方拾って直下へ寄せる:
+
+```toml
+sources = [
+    { type = "mirror", from = "bin/x64-linux/Release/bin", to = "" },
+    { type = "flatten", from = "bin/x64-linux/Release/share/diasurgical/devilutionx", to = "", include = ["devilutionx.mpq"] },
+]
+```
+
+**B. install ルールが条件付きで空になる** — `cmake --install` が何も出力しない
+(エラーも出ない) 場合はこのパターンを疑う。devilutionX は install 一式が
+`CPACK=ON` (Linux では + `BUILD_ASSETS_MPQ=ON`、smpq 必須) の内側にあった。
+上流の条件を CMakeUserPresets の cacheVariables で満たすのが正攻法。
+**注意: option() の既定値はキャッシュに残る**ので、途中からツールを足した場合は
+プリセットで明示 ON にする (再 configure だけでは変わらない)。
+
+**C. install が本当に無い** — ビルドツリーは docker volume 内でホストから
+見えないため、`export` コマンドで必要物を取り出す:
+
+```bash
+# build/<preset>/ 相対パスを指定 → ソース側 .deckbuild/<preset>/ にコピーされる
+./deckbuild.sh -s <src> export mygame assets
+```
+
+取り出した後は stage sources で `.deckbuild/x64-linux/...` を参照する。
+(`.deckbuild/` は .gitignore に入れておく)
+
 ### プリセットが無いプロジェクトへの適用
 
 deckbuild は CMake プリセット前提。上流にプリセットが無い場合は、チェックアウトに

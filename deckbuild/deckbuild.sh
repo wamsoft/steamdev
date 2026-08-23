@@ -89,6 +89,19 @@ case "$CMD" in
     shell)
         run_in_container "bash" || true
         ;;
+    export)
+        # install が無い/使えないプロジェクト用: ビルドツリー (docker volume 内で
+        # ホストから見えない) から指定パスをソース側 .deckbuild/<preset>/ へ取り出す
+        shift || true
+        if [ $# -lt 1 ]; then
+            echo "usage: deckbuild.sh -s SRC export <build-tree 相対パス...>" >&2
+            exit 1
+        fi
+        DEST=".deckbuild/$PRESET"
+        run_in_container "mkdir -p '$DEST' && for p in $*; do \
+            mkdir -p \"$DEST/\$(dirname \"\$p\")\" && \
+            cp -a \"build/$PRESET/\$p\" \"$DEST/\$p\"; done"
+        ;;
     clean)
         docker volume rm "$BUILD_VOL"
         ;;
