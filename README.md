@@ -4,6 +4,13 @@ GUI なしで Steam Deck を制御するツール。ローカルのプロジェ�
 Deck に送り込み、起動・観測・リモートデバッグまでをコマンドラインだけで回せる。
 エージェント (Claude 等) からの自動運転を想定した設計。
 
+**Windows 上で Steam Deck 向け Linux バイナリを作るクロスビルド環境も同梱**
+(deckbuild/)。WSL2 の Docker で Valve 公式 Steam Linux Runtime "sniper" SDK
+コンテナを動かす方式で、SteamOS ネイティブでも Steam 配布と同じ sniper
+ランタイムでも動くバイナリが得られる。CMake プリセットのプロジェクトなら
+定義ファイルを置くだけで Windows ビルド (Proton 実行) と Linux ビルド
+(ネイティブ実行) を同じデータ構成で並行運用できる。
+
 ```
 steamctl -d <deck-ip> project -p <プロジェクト> ship linux
 # → ビルド → 資材構築 → Deck へ転送 → Steam 登録 → 起動 まで 1 コマンド
