@@ -4,11 +4,22 @@ Valve 公式 SteamOS Devkit Client (MIT) のプロトコルを解析し、GUI �
 Steam Deck / Steam Frame を制御するためのライブラリ + CLI。
 エージェント (Claude 等) からの自動デプロイ・リモート操作を想定した設計。
 
-解析結果のプロトコル仕様は [docs/PROTOCOL.md](docs/PROTOCOL.md) を参照。
+## ドキュメント
 
-実機 (Steam Deck / SteamOS 3.8.16) で以下を検証済み: mDNS 探索、既存鍵での SSH 接続、
-sync-utils、status、deploy → run → delete の一連、screenshot、exec --stream、
-logs 回収、SSH トンネル正方向 (-L) / 逆方向 (-R)。
+| ドキュメント | 内容 |
+|---|---|
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | devkit 制御プロトコル仕様 (公式クライアント解析結果) |
+| [docs/DECKPROJECT.md](docs/DECKPROJECT.md) | deckproject.toml リファレンス (プロジェクト定義) |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | 日常の開発サイクル・デバッグ手順・ハマりどころ |
+| [deckbuild/README.md](deckbuild/README.md) | Steam Deck 向け Linux ビルド環境 (sniper SDK コンテナ) |
+
+実機 (Steam Deck / SteamOS 3.8.16) で検証済み:
+
+- 基本機能: mDNS 探索、既存鍵での SSH 接続、sync-utils、status、
+  deploy → run → delete、screenshot、exec --stream、logs 回収、
+  SSH トンネル正方向 (-L) / 逆方向 (-R)
+- パイプライン: krkrz を Windows ビルド (Proton 10.0) / Linux ビルド
+  (sniper SDK コンテナ → ネイティブ実行) の両方で Deck 上に動作確認
 
 ## 特徴
 
@@ -144,7 +155,9 @@ src/steamctl/
   discovery.py   # mDNS (_steamos-devkit._tcp) 探索
   device.py      # Device: HTTP ペアリング / SSH 実行 / rsync / スクリーンショット等
   deploy.py      # タイトルデプロイフロー (prepare-upload → rsync → create-shortcut)
+  project.py     # deckproject.toml 駆動の build/stage/deploy パイプライン
   tunnel.py      # SSH ポートフォワード (正方向 / 逆方向)
   cli.py         # steamctl CLI
-docs/PROTOCOL.md # プロトコル仕様 (解析結果)
+deckbuild/       # sniper SDK コンテナによる Linux ビルド環境 (Dockerfile + ラッパ)
+docs/            # プロトコル仕様 / 定義リファレンス / ワークフロー
 ```

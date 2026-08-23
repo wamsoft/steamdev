@@ -24,7 +24,14 @@ Linux バイナリの互換性はほぼ **ビルド環境の glibc バージョ�
 # Windows から:  .\deckbuild.ps1 image
 ```
 
-イメージ内容: steamrt sniper SDK + CMake 3.31 + vcpkg (full clone)。
+イメージ内容: steamrt sniper SDK + CMake 3.31 + vcpkg (full clone) + nasm/yasm
+(vcpkg の libvpx 等が要求)。
+
+コンパイラは SDK 同梱の **gcc-14** (Valve バックポート版) を既定で使う。
+SDK 標準の gcc-10 は新しめの intrinsic (`_mm256_cvtsi256_si32` 等) を持たず
+コンパイルが通らないことがある。gcc-14 でも glibc ターゲットは 2.31 のまま。
+差し替えは環境変数 `DECKBUILD_CC` / `DECKBUILD_CXX` (例: clang)。
+コンパイラを変えたら `deckbuild.sh clean` でビルドツリーを作り直すこと。
 
 ## ビルド
 
@@ -76,3 +83,17 @@ gameid を分けるか (`mygame_win` / `mygame_linux`)、同一フォルダに e
   (shallow だと失敗する)。
 - イメージの sniper SDK はローリング更新される。再現性を厳密にしたい場合は
   Dockerfile の FROM をダイジェスト固定にする。
+
+## 実機検証済み (krkrz)
+
+krkrz_dev の x64-linux プリセットをこの環境でビルドし、Steam Deck 実機で
+ネイティブ動作を確認済み。生成バイナリの依存は GLIBC ≤ 2.30、GLIBCXX 依存なし
+(libstdc++ 静的リンク) で、SteamOS ネイティブ / sniper コンテナの両方で動く。
+検証コマンド:
+
+```bash
+# コンテナ内で
+objdump -T <exe> | grep -o "GLIBC_[0-9.]*"   | sort -Vu | tail -1   # <= 2.31 なら OK
+objdump -T <exe> | grep -o "GLIBCXX_[0-9.]*" | sort -Vu | tail -1
+readelf -d <exe> | grep -E "NEEDED|RPATH"    # 同梱 .so の soname/RPATH 確認
+```
