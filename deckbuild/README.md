@@ -161,10 +161,18 @@ NEEDED に「SDK にしか無い .so」が出てきたら④の注意事項の�
 | 事象 | 分類 | 対処 |
 |---|---|---|
 | vcpkg の libvpx が nasm を要求 | ビルドツール不足 | ④ Dockerfile に nasm/yasm 追加 |
-| devilutionX が libsodium-dev を要求 | ランタイム系ライブラリ | ① `DEVILUTIONX_SYSTEM_LIBSODIUM=OFF` (FetchContent 静的) |
+| devilutionX が libsodium-dev を要求 | ランタイム系ライブラリ | ① `DEVILUTIONX_SYSTEM_LIBSODIUM=OFF` + `DEVILUTIONX_STATIC_LIBSODIUM=ON` (FetchContent 静的。**静的も指定しないと NEEDED に libsodium.so が残る**) |
 | devilutionX が GTest を要求 | テストのみの依存 | ② `BUILD_TESTING=OFF` |
+| devilutionX の install が空 (何も入らない) | パッケージング条件 | install ルールが `CPACK=ON` + `BUILD_ASSETS_MPQ=ON` 前提だった。smpq を④で追加し両方 ON (キャッシュ済み OFF が残るのでプリセットで明示) |
+| devilutionX 実行時に libSDL2_image が無い | **SteamOS ネイティブに無い .so** | deploy settings で `compat_tool = "SteamLinuxRuntime_sniper"` — ビルド環境と同一のコンテナで実行すれば SDK にあるものは全部ある |
 | gcc-10 に新しい intrinsic が無い | コンパイラ世代 | SDK 同梱 gcc-14 に切替 (deckbuild 既定) |
 | krkrz の libSDL3 soname 欠落 | 同梱 .so の解決 | stage script で補完 + `LD_LIBRARY_PATH=.` |
+| devilutionX が `./save` に書けず起動失敗 | アプリの書込先 | 存在しない相対ディレクトリを指定していた。自動作成される既定パス (XDG) に任せるか、書込先を実在パスにする |
+
+**実行環境の選び方の目安**: バイナリが SDK の .so (SDL2_image 等) に動的リンク
+しているなら `compat_tool = "SteamLinuxRuntime_sniper"` が最も確実
+(ビルド環境 = 実行環境)。ネイティブ実行したいなら NEEDED を確認して
+SteamOS に無いものを静的化するか同梱する。
 
 ### プリセットが無いプロジェクトへの適用
 
