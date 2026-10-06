@@ -96,6 +96,14 @@ gameid を分けるか (`mygame_win` / `mygame_linux`)、同一フォルダに e
   (shallow だと失敗する)。
 - イメージの sniper SDK はローリング更新される。再現性を厳密にしたい場合は
   Dockerfile の FROM をダイジェスト固定にする。
+- sniper (Debian 11) は LTS 終了済みで、SDK イメージの apt が向いている
+  `deb.debian.org/debian-security` からは pool が消えている (インデックスは
+  残るので apt-get install が 404 で失敗する)。Dockerfile で
+  `archive.debian.org` に向け直している。
+- コンテナは root で動くので、**Linux ホストの docker** で使うと install 先
+  (`bin/<preset>/...`) などソース側に出るファイルが root 所有になる
+  (WSL の drvfs では目立たない)。必要なら所有者を戻す:
+  `docker run --rm -v <src>/bin:/b deckbuild-sniper chown -R $(id -u):$(id -g) /b`
 
 ## 依存ライブラリが足りないときの対処ガイド
 

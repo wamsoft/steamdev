@@ -17,7 +17,11 @@ USER root
 # ビルドツール類を追加:
 # - nasm/yasm: vcpkg の一部ポート (libvpx 等) が要求するアセンブラ
 # - smpq: MPQ アーカイバ (devilutionX 等の資材パッケージングが要求)
-RUN apt-get update && apt-get install -y --no-install-recommends nasm yasm smpq \
+# Debian 11 (bullseye) の LTS 終了で bullseye-security の pool が deb.debian.org
+# から消えた (インデックスは残るため 404 になる)。archive.debian.org に向け直す。
+RUN sed -i 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#' \
+        /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; \
+    apt-get update && apt-get install -y --no-install-recommends nasm yasm smpq \
     && rm -rf /var/lib/apt/lists/*
 
 ARG CMAKE_VERSION=3.31.7
