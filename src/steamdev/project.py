@@ -120,6 +120,10 @@ def _run_env(project: Project, target: str) -> dict:
     if os.path.isdir(venv_bin):
         env["VIRTUAL_ENV"] = venv
         env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
+    else:
+        # .venv が無ければ steamdev 自身の python を `python` で引けるようにする
+        # (Debian/Ubuntu 系は python3 しか無く、script の `python` が 127 になる)
+        env["PATH"] = os.path.dirname(sys.executable) + os.pathsep + env.get("PATH", "")
     return env
 
 
