@@ -158,8 +158,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends nasm yasm <追�
 **ランタイムライブラリを apt (-dev) で足す場合は要注意**: SDK に -dev を足せば
 ビルドは通るが、生成バイナリはその **.so を実行時にも要求**する。Deck 側
 (SteamOS ネイティブ / sniper runtime) にその .so が存在するか確認し、無ければ
-.so を stage に同梱して `LD_LIBRARY_PATH=.` で起動する (krkrz の libSDL3 と同じ
-パターン)。迷ったら①③の静的リンク系に倒すほうが安全。
+.so を stage に同梱し、exe の RPATH (`$ORIGIN`) で解決させる (krkrz の libSDL3 と
+同じパターン)。迷ったら①③の静的リンク系に倒すほうが安全。
+
+Steam から起動すると `LD_LIBRARY_PATH` の先頭に Steam ランタイムと `/usr/lib` が
+入り、ゲームフォルダは末尾に付くだけなので、`LD_LIBRARY_PATH=.` や RUNPATH では
+**SteamOS 側に同名の .so があるとそちらが勝つ**。同梱 .so を確実に使うには exe に
+`$ORIGIN` を **DT_RPATH** で埋め込む (CMake なら `INSTALL_RPATH "\$ORIGIN"` +
+`LINKER:--disable-new-dtags`) + soname リンクも同梱する。
 
 **⑤ ソースから静的ビルドしてイメージに焼く (最後の手段)**
 
@@ -175,7 +181,7 @@ objdump -T <exe> | grep -o "GLIBC_[0-9.]*" | sort -Vu | tail -1    # <= 2.31 な
 ```
 
 NEEDED に「SDK にしか無い .so」が出てきたら④の注意事項の状況。同梱 + soname
-リンク補完 + `LD_LIBRARY_PATH=.` で対処する。
+リンク + exe の `$ORIGIN` DT_RPATH で対処する。
 
 ### 実例 (このリポジトリで実際に踏んだもの)
 
@@ -187,7 +193,8 @@ NEEDED に「SDK にしか無い .so」が出てきたら④の注意事項の�
 | devilutionX の install が空 (何も入らない) | パッケージング条件 | install ルールが `CPACK=ON` + `BUILD_ASSETS_MPQ=ON` 前提だった。smpq を④で追加し両方 ON (キャッシュ済み OFF が残るのでプリセットで明示) |
 | devilutionX 実行時に libSDL2_image が無い | **SteamOS ネイティブに無い .so** | deploy settings で `compat_tool = "SteamLinuxRuntime_sniper"` — ビルド環境と同一のコンテナで実行すれば SDK にあるものは全部ある |
 | gcc-10 に新しい intrinsic が無い | コンパイラ世代 | SDK 同梱 gcc-14 に切替 (deckbuild 既定) |
-| krkrz の libSDL3 soname 欠落 | 同梱 .so の解決 | stage script で補完 + `LD_LIBRARY_PATH=.` |
+| krkrz の libSDL3 soname 欠落 | 同梱 .so の解決 | 当初 stage script で補完 + `LD_LIBRARY_PATH=.` → 下記の理由で RPATH 方式に変更 |
+| krkrz が同梱 SDL3 (3.4) でなく SteamOS の SDL3 (3.2) で動いていた | 同梱 .so の解決順 | Steam 起動時の `LD_LIBRARY_PATH` は `/usr/lib` が先で `.` は効かない。exe に `$ORIGIN` を DT_RPATH (`--disable-new-dtags`) で埋め込み、soname リンクも install。読まれた .so は `/proc/<pid>/maps` で確認 |
 | devilutionX が `./save` に書けず起動失敗 | アプリの書込先 | 存在しない相対ディレクトリを指定していた。自動作成される既定パス (XDG) に任せるか、書込先を実在パスにする |
 
 **実行環境の選び方の目安**: バイナリが SDK の .so (SDL2_image 等) に動的リンク

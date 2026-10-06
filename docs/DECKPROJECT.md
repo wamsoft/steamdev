@@ -124,7 +124,7 @@ sources = [
 | キー | 意味 |
 |---|---|
 | `command` | **必須**。デバイス上での起動コマンドライン全体を 1 つの文字列で。cwd はアップロード先 (`~/devkit-game/<gameid>/`) |
-| `env` | 起動時環境変数の辞書 (例 `{ LD_LIBRARY_PATH = "." }`) |
+| `env` | 起動時環境変数の辞書 (例 `{ SDL_LOGGING = "*=debug" }`)。`LD_LIBRARY_PATH` は Steam が先頭に自前のパスを入れるため同梱 .so の解決には向かない (RPATH を使う) |
 | `settings` | Steam ショートカットに渡す設定辞書 (下記) |
 | `gameid` | ターゲット別 gameid の明示指定 |
 | `appid` | `steam_appid.txt` に書く AppID (Steamworks API を使う場合) |
@@ -156,8 +156,8 @@ krkrz_dev (吉里吉里Z 開発用 umbrella リポジトリ、
 https://github.com/wamsoft/krkrz_dev) の `deckproject.toml` を参照。要点:
 
 - Linux: deckbuild でビルド → `bin/x64-linux/Release` + `data/` を stage →
-  soname リンク欠落 (`libSDL3.so.0`) を stage script で補完 →
-  `LD_LIBRARY_PATH=.` を付けて `./krkrz data` で起動
+  `./krkrz data` で起動 (同梱 libSDL3 は exe の `$ORIGIN` DT_RPATH で解決。
+  soname リンク `libSDL3.so.0` も install に含まれる)
 - Windows: 既存 make フローでビルド → `krkrz64.exe data` を
   `steam_play=1, compat_tool=proton-stable` で起動
 

@@ -173,7 +173,7 @@ REPL 駆動)・実機で確認済みのハマりどころ一覧は
 | 症状 | 見る場所 |
 |---|---|
 | デプロイしたのに起動しない | [docs/WORKFLOW.md](docs/WORKFLOW.md) のハマりどころ表 (未インストール Proton 指定が定番) |
-| Linux バイナリが即死 | 同上 (共有ライブラリの soname / LD_LIBRARY_PATH) |
+| Linux バイナリが即死 / 同梱 .so が使われない | 同上 (共有ライブラリの soname / RPATH) |
 | ビルドが通らない | [deckbuild/README.md](deckbuild/README.md) (コンパイラ差し替え等) |
 | 接続できない | `steamdev discover` → `info` → `status` の順に切り分け |
 

@@ -106,7 +106,7 @@ ESC 注入で復帰、まで全て動作。
 |---|---|
 | deploy 後に起動しない (無反応) | `compat_tool=proton-experimental` 等が Deck に未インストール。compat_log.txt に "not installed"。`proton-stable` を使う |
 | `pkill -f <パターン>` が exit 127 で失敗 | パターンが自分のリモートシェルにマッチして自爆。`krkrz64[.]exe` のようにブラケットを挟む |
-| Linux バイナリが即死 | 同梱 .so の soname リンク欠落 / RPATH なし。stage script で soname コピーを作り `env = { LD_LIBRARY_PATH = "." }` |
+| Linux バイナリが即死 / 同梱 .so が使われない | 同梱 .so の soname リンク欠落 / RPATH なし。Steam 起動では `LD_LIBRARY_PATH` の先頭に `/usr/lib` 等が入るので `LD_LIBRARY_PATH=.` では SteamOS 側の同名 .so が勝つ。exe に `$ORIGIN` を DT_RPATH (`--disable-new-dtags`) で埋め込み soname リンクも同梱する。読まれた .so は `/proc/<pid>/maps` で確認 |
 | Proton 初回起動が遅い | prefix 生成中。数十秒待つのが正常 |
 | `run-game` 直後にプロセスが見えない | Steam 側の処理に数秒〜十数秒ラグ。ポーリングで待つ |
 | 新旧タイトルが両方画面に残る | 前に起動したものが裏に生存。pkill で明示終了 |
