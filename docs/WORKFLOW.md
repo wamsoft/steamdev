@@ -108,6 +108,8 @@ ESC 注入で復帰、まで全て動作。
 | `pkill -f <パターン>` が exit 127 で失敗 | パターンが自分のリモートシェルにマッチして自爆。`krkrz64[.]exe` のようにブラケットを挟む |
 | Linux バイナリが即死 / 同梱 .so が使われない | 同梱 .so の soname リンク欠落 / RPATH なし。Steam 起動では `LD_LIBRARY_PATH` の先頭に `/usr/lib` 等が入るので `LD_LIBRARY_PATH=.` では SteamOS 側の同名 .so が勝つ。exe に `$ORIGIN` を DT_RPATH (`--disable-new-dtags`) で埋め込み soname リンクも同梱する。読まれた .so は `/proc/<pid>/maps` で確認 |
 | Proton 初回起動が遅い | prefix 生成中。数十秒待つのが正常 |
+| 外したはずの環境変数が効き続ける | devkit-utils の `save_env` は env が空だと何もせず、以前の `~/devkit-game/<gameid>-env.json` が残る。steamdev `deploy` は env が空ならこのファイルを消す (古い steamdev で登録した title は再デプロイで消える) |
+| `invalid gameid` で deploy が失敗 | gameid は `^[A-Za-z_][A-Za-z0-9_.]+$`。ハイフン不可 (`my-game_linux` → `my_game_linux`) |
 | `run-game` 直後にプロセスが見えない | Steam 側の処理に数秒〜十数秒ラグ。ポーリングで待つ |
 | 新旧タイトルが両方画面に残る | 前に起動したものが裏に生存。pkill で明示終了 |
 | ビルドが `_mm256_*` 未定義で失敗 | sniper SDK 既定の gcc-10 が古い。deckbuild は gcc-14 を既定にしている (DECKBUILD_CC/CXX で変更可) |

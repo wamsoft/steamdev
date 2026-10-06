@@ -76,6 +76,11 @@ def deploy(dev: Device, spec: DeploySpec,
     if spec.clear_settings:
         parms["clear_settings"] = True
 
+    # devkit-utils の save_env は env が空だと何もしないので、以前の登録で書いた
+    # <gameid>-env.json が残り、外したはずの環境変数が効き続ける。空なら消しておく
+    if not spec.env:
+        dev.run("rm -f ~/devkit-game/" + shlex.quote(spec.gameid + "-env.json"))
+
     out = dev.run_json(
         "python3 ~/devkit-utils/steam-client-create-shortcut --parms "
         + shlex.quote(json.dumps(parms))
